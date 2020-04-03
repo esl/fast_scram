@@ -13,6 +13,7 @@
  */
 
 #include "fastpbkdf2.h"
+#include "erl_nif.h"
 
 #include <assert.h>
 #include <string.h>
@@ -400,3 +401,29 @@ void fastpbkdf2_hmac_sha512(const uint8_t *pw, size_t npw,
   PBKDF2(sha512)(pw, npw, salt, nsalt, iterations, out, nout);
 }
 
+
+// ERLANG CODE NOW
+static int load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info) {
+    return 0;
+}
+
+static int reload(ErlNifEnv* env, void** priv, ERL_NIF_TERM info)
+{
+    return 0;
+}
+
+static int upgrade(ErlNifEnv* env, void** priv, void** old_priv, ERL_NIF_TERM info)
+{
+    return load(env, priv, info);
+}
+
+static void unload(ErlNifEnv* env, void* priv)
+{
+    return;
+}
+
+
+static ErlNifFunc fastpbkdf2_nif_funcs[] = {
+};
+
+ERL_NIF_INIT(erl_fastpbkdf2, fastpbkdf2_nif_funcs, load, reload, upgrade, unload);
