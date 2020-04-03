@@ -63,8 +63,7 @@ static inline void write64_be(uint64_t n, uint8_t out[8])
 
 /* Prepare block (of blocksz bytes) to contain md padding denoting a msg-size
  * message (in bytes).  block has a prefix of used bytes.
- *
- * Message length is expressed in 32 bits (so suitable for sha1, sha256, sha512). */
+ * Message length is expressed in 32 bits (so suitable for all sha1 and sha2 algorithms). */
 static inline void md_pad(uint8_t *block, size_t blocksz, size_t used, size_t msg)
 {
   memset(block + used, 0, blocksz - used - 4);
@@ -85,29 +84,30 @@ static inline void md_pad(uint8_t *block, size_t blocksz, size_t used, size_t ms
 /* This macro expands to decls for the whole implementation for a given
  * hash function.  Arguments are:
  *
- * _name like 'sha1', added to symbol names
- * _blocksz block size, in bytes
- * _hashsz digest output, in bytes
- * _ctx hash context type
- * _init hash context initialisation function
+ * _name like 'sha1', added to symbol names                         (e.g. sha256)
+ * _blocksz block size, in bytes                                    (e.g. SHA256_CBLOCK)
+ * _hashsz digest output, in bytes                                  (e.g. SHA256_DIGEST_LENGTH)
+ * _ctx hash context type                                           (e.g. SHA256_Init)
+ * _init hash context initialisation function                       (e.g. SHA256_Update)
  *    args: (_ctx *c)
- * _update hash context update function
+ * _update hash context update function                             (e.g. SHA256_Update)
  *    args: (_ctx *c, const void *data, size_t ndata)
- * _final hash context finish function
+ * _final hash context finish function                              (e.g. SHA256_Final)
  *    args: (void *out, _ctx *c)
- * _xform hash context raw block update function
+ * _xform hash context raw block update function                    (e.g. SHA256_Transform)
  *    args: (_ctx *c, const void *data)
- * _xcpy hash context raw copy function (only need copy hash state)
+ * _xcpy hash context raw copy function (only need copy hash state) (e.g. sha256_cpy)
  *    args: (_ctx * restrict out, const _ctx *restrict in)
- * _xtract hash context state extraction
+ * _xtract hash context state extraction                            (e.g. sha256_extract)
  *    args: args (_ctx *restrict c, uint8_t *restrict out)
- * _xxor hash context xor function (only need xor hash state)
+ * _xxor hash context xor function (only need xor hash state)       (e.g. sha256_xor)
  *    args: (_ctx *restrict out, const _ctx *restrict in)
  *
  * The resulting function is named PBKDF2(_name).
  */
 #define DECL_PBKDF2(_name, _blocksz, _hashsz, _ctx,                           \
                     _init, _update, _xform, _final, _xcpy, _xtract, _xxor)    \
+                                                                              \
   typedef struct {                                                            \
     _ctx inner;                                                               \
     _ctx outer;                                                               \
@@ -125,7 +125,6 @@ static inline void md_pad(uint8_t *block, size_t blocksz, size_t used, size_t ms
       _init(&ctx->inner);                                                     \
       _update(&ctx->inner, key, nkey);                                        \
       _final(k, &ctx->inner);                                                 \
-                                                                              \
       key = k;                                                                \
       nkey = _hashsz;                                                         \
     }                                                                         \
@@ -170,7 +169,6 @@ static inline void md_pad(uint8_t *block, size_t blocksz, size_t used, size_t ms
     _update(&ctx->outer, out, _hashsz);                                       \
     _final(out, &ctx->outer);                                                 \
   }                                                                           \
-                                                                              \
                                                                               \
   /* --- PBKDF2 --- */                                                        \
   static inline void PBKDF2_F(_name)(const HMAC_CTX(_name) *startctx,         \
@@ -241,6 +239,7 @@ static inline void md_pad(uint8_t *block, size_t blocksz, size_t used, size_t ms
       memcpy(out + offset, block, taken);                                     \
     }                                                                         \
   }
+
 
 static inline void sha1_extract(SHA_CTX *restrict ctx, uint8_t *restrict out)
 {
@@ -402,7 +401,6 @@ void fastpbkdf2_hmac_sha512(const uint8_t *pw, size_t npw,
 }
 
 
-// ERLANG CODE NOW
 static int load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info) {
     return 0;
 }
@@ -422,8 +420,78 @@ static void unload(ErlNifEnv* env, void* priv)
     return;
 }
 
+ERL_NIF_TERM mk_error(ErlNifEnv* env, const char *error_msg)
+{
+    return enif_make_tuple2(
+            env,
+            enif_make_atom(env, "error"),
+            enif_make_atom(env, error_msg)
+            );
+}
+
+static ERL_NIF_TERM
+fastpbkdf2_hmac_sha(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+    int hash_number;
+    if (!enif_get_uint(env, argv[0], &hash_number))
+        return mk_error(env, "bad_hash");
+
+    ErlNifBinary password;
+    if (!enif_inspect_binary(env, argv[1], &password))
+        return mk_error(env, "bad_password");
+
+    ErlNifBinary salt;
+    if (!enif_inspect_binary(env, argv[2], &salt))
+        return mk_error(env, "bad_salt");
+
+    int iteration_count;
+    if (!enif_get_int(env, argv[3], &iteration_count))
+        return mk_error(env, "bad_count");
+    if (iteration_count <= 0)
+        return mk_error(env, "bad_count");
+
+    /** Calculates PBKDF2-HMAC-SHA
+     *  @p npw bytes at @p pw are the password input.
+     *  @p nsalt bytes at @p salt are the salt input.
+     *  @p iterations is the PBKDF2 iteration count and must be non-zero.
+     *  @p nout bytes of output are written to @p out.  @p nout must be non-zero.
+     */
+    ERL_NIF_TERM result;
+    unsigned char *output;
+    switch (hash_number)
+    {
+        case 1:
+            output = enif_make_new_binary(env, 20, &result);
+            fastpbkdf2_hmac_sha1(
+                    password.data, password.size,
+                    salt.data, salt.size,
+                    iteration_count,
+                    output, 20);
+            break;
+        case 256:
+            output = enif_make_new_binary(env, 32, &result);
+            fastpbkdf2_hmac_sha256(
+                    password.data, password.size,
+                    salt.data, salt.size,
+                    iteration_count,
+                    output, 32);
+            break;
+        case 512:
+            output = enif_make_new_binary(env, 64, &result);
+            fastpbkdf2_hmac_sha512(
+                    password.data, password.size,
+                    salt.data, salt.size,
+                    iteration_count,
+                    output, 64);
+            break;
+        default:
+            return enif_make_badarg(env);
+    }
+    return result;
+}
 
 static ErlNifFunc fastpbkdf2_nif_funcs[] = {
+    {"fastpbkdf2_hmac_sha", 4, fastpbkdf2_hmac_sha, ERL_NIF_DIRTY_JOB_CPU_BOUND}
 };
 
 ERL_NIF_INIT(erl_fastpbkdf2, fastpbkdf2_nif_funcs, load, reload, upgrade, unload);
