@@ -14,7 +14,8 @@
 -export([
          erlang_and_nif_are_equivalent_sha1/1,
          erlang_and_nif_are_equivalent_sha256/1,
-         erlang_and_nif_are_equivalent_sha512/1
+         erlang_and_nif_are_equivalent_sha512/1,
+         realtime_test/1
         ]).
 
 -include_lib("common_test/include/ct.hrl").
@@ -23,7 +24,8 @@
 
 all() ->
     [
-     {group, equivalents}
+     {group, equivalents},
+     realtime_test
     ].
 
 groups() ->
@@ -86,3 +88,18 @@ erlang_and_nif_are_equivalent_(Sha, NumberSha) ->
                                      {numtests, 100},
                                      {start_size, 2},
                                      {max_size, 64}])).
+
+-ifdef(STATISTICS).
+realtime_test(_Config) ->
+    % Allocate two large binaries
+    A = crypto:strong_rand_bytes(64),
+    B = crypto:strong_rand_bytes(64),
+    Fun = fun() ->
+                  erl_fastpbkdf2:fastpbkdf2_hmac_sha(512, A, B, 10000)
+          end,
+    #{mean := AverageJitter} = stats_latency:realtime_latency_on_load(Fun, 20, 5000),
+    ?assert(AverageJitter < 50).
+-else.
+realtime_test(_Config) ->
+    ok.
+-endif.
