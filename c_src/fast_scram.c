@@ -158,7 +158,8 @@ static inline void md_pad(uint8_t *block, size_t blocksz, size_t used, size_t ms
   }                                                                           \
                                                                               \
   /* --- PBKDF2 --- */                                                        \
-  static inline void PBKDF2_F(_name)(const HMAC_CTX(_name) *startctx,         \
+  static inline void PBKDF2_F(_name)(ErlNifEnv *env,                          \
+                                     const HMAC_CTX(_name) *startctx,         \
                                      const uint8_t *salt, size_t nsalt,       \
                                      uint32_t iterations,                     \
                                      uint8_t *out)                            \
@@ -199,7 +200,8 @@ static inline void md_pad(uint8_t *block, size_t blocksz, size_t used, size_t ms
     _xtract(&result, out);                                                    \
   }                                                                           \
                                                                               \
-  static inline void PBKDF2(_name)(const uint8_t *pw, size_t npw,             \
+  static inline void PBKDF2(_name)(ErlNifEnv *env,                            \
+                     const uint8_t *pw, size_t npw,                           \
                      const uint8_t *salt, size_t nsalt,                       \
                      uint32_t iterations,                                     \
                      uint8_t *out)                                            \
@@ -207,13 +209,11 @@ static inline void md_pad(uint8_t *block, size_t blocksz, size_t used, size_t ms
     assert(iterations);                                                       \
     assert(out);                                                              \
                                                                               \
-    /* Starting point for inner loop. */                                      \
     HMAC_CTX(_name) ctx;                                                      \
     HMAC_INIT(_name)(&ctx, pw, npw);                                          \
                                                                               \
     uint8_t block[_hashsz];                                                   \
-    PBKDF2_F(_name)(&ctx, salt, nsalt, iterations, block);                    \
-                                                                              \
+    PBKDF2_F(_name)(env, &ctx, salt, nsalt, iterations, block);               \
     memcpy(out, block, _hashsz);                                              \
   }
 
@@ -458,7 +458,7 @@ hi_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     {
         case 1:
             output = enif_make_new_binary(env, SHA_DIGEST_LENGTH, &result);
-            PBKDF2(sha1)(
+            PBKDF2(sha1)(env,
                     password.data, password.size,
                     salt.data, salt.size,
                     iteration_count,
@@ -466,7 +466,7 @@ hi_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
             break;
         case 224:
             output = enif_make_new_binary(env, SHA224_DIGEST_LENGTH, &result);
-            PBKDF2(sha224)(
+            PBKDF2(sha224)(env,
                     password.data, password.size,
                     salt.data, salt.size,
                     iteration_count,
@@ -474,7 +474,7 @@ hi_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
             break;
         case 256:
             output = enif_make_new_binary(env, SHA256_DIGEST_LENGTH, &result);
-            PBKDF2(sha256)(
+            PBKDF2(sha256)(env,
                     password.data, password.size,
                     salt.data, salt.size,
                     iteration_count,
@@ -482,7 +482,7 @@ hi_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
             break;
         case 384:
             output = enif_make_new_binary(env, SHA384_DIGEST_LENGTH, &result);
-            PBKDF2(sha384)(
+            PBKDF2(sha384)(env,
                     password.data, password.size,
                     salt.data, salt.size,
                     iteration_count,
@@ -490,7 +490,7 @@ hi_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
             break;
         case 512:
             output = enif_make_new_binary(env, SHA512_DIGEST_LENGTH, &result);
-            PBKDF2(sha512)(
+            PBKDF2(sha512)(env,
                     password.data, password.size,
                     salt.data, salt.size,
                     iteration_count,
