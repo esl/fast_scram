@@ -48,13 +48,6 @@ static inline void write64_be(uint64_t n, uint8_t out[8])
 #endif
 }
 
-/* --- Optional OpenMP parallelisation of consecutive blocks --- */
-#ifdef WITH_OPENMP
-# define OPENMP_PARALLEL_FOR _Pragma("omp parallel for")
-#else
-# define OPENMP_PARALLEL_FOR
-#endif
-
 /* Prepare block (of blocksz bytes) to contain md padding denoting a msg-size
  * message (in bytes).  block has a prefix of used bytes.
  * Message length is expressed in 32 bits (so suitable for all sha1 and sha2 algorithms). */
@@ -210,28 +203,19 @@ static inline void md_pad(uint8_t *block, size_t blocksz, size_t used, size_t ms
   static inline void PBKDF2(_name)(const uint8_t *pw, size_t npw,             \
                      const uint8_t *salt, size_t nsalt,                       \
                      uint32_t iterations,                                     \
-                     uint8_t *out, size_t nout)                               \
+                     uint8_t *out)                                            \
   {                                                                           \
     assert(iterations);                                                       \
-    assert(out && nout);                                                      \
+    assert(out);                                                              \
                                                                               \
     /* Starting point for inner loop. */                                      \
     HMAC_CTX(_name) ctx;                                                      \
     HMAC_INIT(_name)(&ctx, pw, npw);                                          \
                                                                               \
-    /* How many blocks do we need? */                                         \
-    uint32_t blocks_needed = (uint32_t)(nout + _hashsz - 1) / _hashsz;        \
+    uint8_t block[_hashsz];                                                   \
+    PBKDF2_F(_name)(&ctx, 1, salt, nsalt, iterations, block);                 \
                                                                               \
-    OPENMP_PARALLEL_FOR                                                       \
-    for (uint32_t counter = 1; counter <= blocks_needed; counter++)           \
-    {                                                                         \
-      uint8_t block[_hashsz];                                                 \
-      PBKDF2_F(_name)(&ctx, counter, salt, nsalt, iterations, block);         \
-                                                                              \
-      size_t offset = (counter - 1) * _hashsz;                                \
-      size_t taken = MIN(nout - offset, _hashsz);                             \
-      memcpy(out + offset, block, taken);                                     \
-    }                                                                         \
+    memcpy(out, block, _hashsz);                                              \
   }
 
 
@@ -468,7 +452,6 @@ fastpbkdf2_hmac_sha(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
      *  @p npw bytes at @p pw are the password input.
      *  @p nsalt bytes at @p salt are the salt input.
      *  @p iterations is the PBKDF2 iteration count and must be non-zero.
-     *  @p nout bytes of output are written to @p out.  @p nout must be non-zero.
      */
     ERL_NIF_TERM result;
     unsigned char *output;
@@ -480,7 +463,7 @@ fastpbkdf2_hmac_sha(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
                     password.data, password.size,
                     salt.data, salt.size,
                     iteration_count,
-                    output, SHA_DIGEST_LENGTH);
+                    output);
             break;
         case 224:
             output = enif_make_new_binary(env, SHA224_DIGEST_LENGTH, &result);
@@ -488,14 +471,15 @@ fastpbkdf2_hmac_sha(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
                     password.data, password.size,
                     salt.data, salt.size,
                     iteration_count,
-                    output, SHA224_DIGEST_LENGTH);
+                    output);
             break;
         case 256:
             output = enif_make_new_binary(env, SHA256_DIGEST_LENGTH, &result);
             PBKDF2(sha256)(
                     password.data, password.size,
                     salt.data, salt.size,
-                    iteration_count, output, SHA256_DIGEST_LENGTH);
+                    iteration_count,
+                    output);
             break;
         case 384:
             output = enif_make_new_binary(env, SHA384_DIGEST_LENGTH, &result);
@@ -503,7 +487,7 @@ fastpbkdf2_hmac_sha(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
                     password.data, password.size,
                     salt.data, salt.size,
                     iteration_count,
-                    output, SHA384_DIGEST_LENGTH);
+                    output);
             break;
         case 512:
             output = enif_make_new_binary(env, SHA512_DIGEST_LENGTH, &result);
@@ -511,7 +495,7 @@ fastpbkdf2_hmac_sha(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
                     password.data, password.size,
                     salt.data, salt.size,
                     iteration_count,
-                    output, SHA512_DIGEST_LENGTH);
+                    output);
             break;
         default:
             return enif_make_badarg(env);
