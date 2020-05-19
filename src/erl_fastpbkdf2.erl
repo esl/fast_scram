@@ -3,7 +3,7 @@
 
 -export([fastpbkdf2_hmac_sha/4]).
 
--spec fastpbkdf2_hmac_sha(1 | 256 | 512, binary(), binary(), non_neg_integer()) -> binary().
+-spec fastpbkdf2_hmac_sha(1 | 224 | 256 | 384 | 512, binary(), binary(), non_neg_integer()) -> binary().
 fastpbkdf2_hmac_sha(_Hash, _Password, _Salt, _IterationCount) ->
     erlang:nif_error(not_loaded).
 

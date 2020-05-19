@@ -280,6 +280,17 @@ DECL_PBKDF2(sha1,
             sha1_extract,
             sha1_xor)
 
+static inline void sha224_extract(SHA256_CTX *restrict ctx, uint8_t *restrict out)
+{
+  write32_be(ctx->h[0], out);
+  write32_be(ctx->h[1], out + 4);
+  write32_be(ctx->h[2], out + 8);
+  write32_be(ctx->h[3], out + 12);
+  write32_be(ctx->h[4], out + 16);
+  write32_be(ctx->h[5], out + 20);
+  write32_be(ctx->h[6], out + 24);
+}
+
 static inline void sha256_extract(SHA256_CTX *restrict ctx, uint8_t *restrict out)
 {
   write32_be(ctx->h[0], out);
@@ -316,6 +327,18 @@ static inline void sha256_xor(SHA256_CTX *restrict out, const SHA256_CTX *restri
   out->h[7] ^= in->h[7];
 }
 
+DECL_PBKDF2(sha224,
+            SHA256_CBLOCK,
+            SHA224_DIGEST_LENGTH,
+            SHA256_CTX,
+            SHA224_Init,
+            SHA224_Update,
+            SHA256_Transform,
+            SHA224_Final,
+            sha256_cpy,
+            sha224_extract,
+            sha256_xor)
+
 DECL_PBKDF2(sha256,
             SHA256_CBLOCK,
             SHA256_DIGEST_LENGTH,
@@ -327,6 +350,16 @@ DECL_PBKDF2(sha256,
             sha256_cpy,
             sha256_extract,
             sha256_xor)
+
+static inline void sha384_extract(SHA512_CTX *restrict ctx, uint8_t *restrict out)
+{
+  write64_be(ctx->h[0], out);
+  write64_be(ctx->h[1], out + 8);
+  write64_be(ctx->h[2], out + 16);
+  write64_be(ctx->h[3], out + 24);
+  write64_be(ctx->h[4], out + 32);
+  write64_be(ctx->h[5], out + 40);
+}
 
 static inline void sha512_extract(SHA512_CTX *restrict ctx, uint8_t *restrict out)
 {
@@ -364,6 +397,18 @@ static inline void sha512_xor(SHA512_CTX *restrict out, const SHA512_CTX *restri
   out->h[7] ^= in->h[7];
 }
 
+DECL_PBKDF2(sha384,
+            SHA512_CBLOCK,
+            SHA384_DIGEST_LENGTH,
+            SHA512_CTX,
+            SHA384_Init,
+            SHA384_Update,
+            SHA512_Transform,
+            SHA384_Final,
+            sha512_cpy,
+            sha384_extract,
+            sha512_xor)
+
 DECL_PBKDF2(sha512,
             SHA512_CBLOCK,
             SHA512_DIGEST_LENGTH,
@@ -384,12 +429,28 @@ void fastpbkdf2_hmac_sha1(const uint8_t *pw, size_t npw,
   PBKDF2(sha1)(pw, npw, salt, nsalt, iterations, out, nout);
 }
 
+void fastpbkdf2_hmac_sha224(const uint8_t *pw, size_t npw,
+                            const uint8_t *salt, size_t nsalt,
+                            uint32_t iterations,
+                            uint8_t *out, size_t nout)
+{
+  PBKDF2(sha224)(pw, npw, salt, nsalt, iterations, out, nout);
+}
+
 void fastpbkdf2_hmac_sha256(const uint8_t *pw, size_t npw,
                             const uint8_t *salt, size_t nsalt,
                             uint32_t iterations,
                             uint8_t *out, size_t nout)
 {
   PBKDF2(sha256)(pw, npw, salt, nsalt, iterations, out, nout);
+}
+
+void fastpbkdf2_hmac_sha384(const uint8_t *pw, size_t npw,
+                            const uint8_t *salt, size_t nsalt,
+                            uint32_t iterations,
+                            uint8_t *out, size_t nout)
+{
+  PBKDF2(sha384)(pw, npw, salt, nsalt, iterations, out, nout);
 }
 
 void fastpbkdf2_hmac_sha512(const uint8_t *pw, size_t npw,
@@ -461,28 +522,43 @@ fastpbkdf2_hmac_sha(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     switch (hash_number)
     {
         case 1:
-            output = enif_make_new_binary(env, 20, &result);
+            output = enif_make_new_binary(env, SHA_DIGEST_LENGTH, &result);
             fastpbkdf2_hmac_sha1(
                     password.data, password.size,
                     salt.data, salt.size,
                     iteration_count,
-                    output, 20);
+                    output, SHA_DIGEST_LENGTH);
             break;
-        case 256:
-            output = enif_make_new_binary(env, 32, &result);
-            fastpbkdf2_hmac_sha256(
+        case 224:
+            output = enif_make_new_binary(env, SHA224_DIGEST_LENGTH, &result);
+            fastpbkdf2_hmac_sha224(
                     password.data, password.size,
                     salt.data, salt.size,
                     iteration_count,
-                    output, 32);
+                    output, SHA224_DIGEST_LENGTH);
+            break;
+        case 256:
+            output = enif_make_new_binary(env, SHA256_DIGEST_LENGTH, &result);
+            fastpbkdf2_hmac_sha256(
+                    password.data, password.size,
+                    salt.data, salt.size,
+                    iteration_count, output, SHA256_DIGEST_LENGTH);
+            break;
+        case 384:
+            output = enif_make_new_binary(env, SHA384_DIGEST_LENGTH, &result);
+            fastpbkdf2_hmac_sha384(
+                    password.data, password.size,
+                    salt.data, salt.size,
+                    iteration_count,
+                    output, SHA384_DIGEST_LENGTH);
             break;
         case 512:
-            output = enif_make_new_binary(env, 64, &result);
+            output = enif_make_new_binary(env, SHA512_DIGEST_LENGTH, &result);
             fastpbkdf2_hmac_sha512(
                     password.data, password.size,
                     salt.data, salt.size,
                     iteration_count,
-                    output, 64);
+                    output, SHA512_DIGEST_LENGTH);
             break;
         default:
             return enif_make_badarg(env);

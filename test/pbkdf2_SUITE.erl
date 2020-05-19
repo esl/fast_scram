@@ -13,7 +13,9 @@
 %% test cases
 -export([
          erlang_and_nif_are_equivalent_sha1/1,
+         erlang_and_nif_are_equivalent_sha224/1,
          erlang_and_nif_are_equivalent_sha256/1,
+         erlang_and_nif_are_equivalent_sha384/1,
          erlang_and_nif_are_equivalent_sha512/1,
          realtime_test/1
         ]).
@@ -33,7 +35,9 @@ groups() ->
      {equivalents, [parallel],
       [
        erlang_and_nif_are_equivalent_sha1,
+       erlang_and_nif_are_equivalent_sha224,
        erlang_and_nif_are_equivalent_sha256,
+       erlang_and_nif_are_equivalent_sha384,
        erlang_and_nif_are_equivalent_sha512
       ]}
     ].
@@ -72,8 +76,14 @@ end_per_testcase(_TestCase, _Config) ->
 erlang_and_nif_are_equivalent_sha1(_Config) ->
     erlang_and_nif_are_equivalent_(sha, 1).
 
+erlang_and_nif_are_equivalent_sha224(_Config) ->
+    erlang_and_nif_are_equivalent_(sha224, 224).
+
 erlang_and_nif_are_equivalent_sha256(_Config) ->
     erlang_and_nif_are_equivalent_(sha256, 256).
+
+erlang_and_nif_are_equivalent_sha384(_Config) ->
+    erlang_and_nif_are_equivalent_(sha384, 384).
 
 erlang_and_nif_are_equivalent_sha512(_Config) ->
     erlang_and_nif_are_equivalent_(sha512, 512).
