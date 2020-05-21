@@ -12,25 +12,19 @@
  * <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 
-#include "fastpbkdf2.h"
 #include "erl_nif.h"
 
 #include <assert.h>
 #include <string.h>
+#include <stdlib.h>
+#include <stdint.h>
 #if defined(__GNUC__)
 #include <sys/types.h>
 #endif
 
 #include <openssl/sha.h>
 
-/* --- MSVC doesn't support C99 --- */
-#ifdef _MSC_VER
-#define restrict
-#define _Pragma __pragma
-#endif
-
 /* --- Common useful things --- */
-#define MIN(a, b) ((a) > (b)) ? (b) : (a)
 
 static inline void write32_be(uint32_t n, uint8_t out[4])
 {
