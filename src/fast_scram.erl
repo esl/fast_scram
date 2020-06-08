@@ -1,10 +1,10 @@
--module(erl_fastpbkdf2).
+-module(fast_scram).
 -on_load(load/0).
 
--export([fastpbkdf2_hmac_sha/4]).
+-export([hi/4]).
 
--spec fastpbkdf2_hmac_sha(1 | 224 | 256 | 384 | 512, binary(), binary(), non_neg_integer()) -> binary().
-fastpbkdf2_hmac_sha(_Hash, _Password, _Salt, _IterationCount) ->
+-spec hi(1 | 224 | 256 | 384 | 512, binary(), binary(), non_neg_integer()) -> binary().
+hi(_Hash, _Password, _Salt, _IterationCount) ->
     erlang:nif_error(not_loaded).
 
 %%%===================================================================

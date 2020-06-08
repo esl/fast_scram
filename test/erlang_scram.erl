@@ -1,4 +1,4 @@
--module(erlang_pbkdf2).
+-module(erlang_scram).
 
 -export([hi/4]).
 

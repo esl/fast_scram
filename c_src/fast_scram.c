@@ -427,7 +427,7 @@ ERL_NIF_TERM mk_error(ErlNifEnv* env, const char *error_msg)
 }
 
 static ERL_NIF_TERM
-fastpbkdf2_hmac_sha(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+hi_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     int hash_number;
     if (!enif_get_uint(env, argv[0], &hash_number))
@@ -503,7 +503,7 @@ fastpbkdf2_hmac_sha(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ErlNifFunc fastpbkdf2_nif_funcs[] = {
-    {"fastpbkdf2_hmac_sha", 4, fastpbkdf2_hmac_sha, ERL_NIF_DIRTY_JOB_CPU_BOUND}
+    {"hi", 4, hi_nif, ERL_NIF_DIRTY_JOB_CPU_BOUND}
 };
 
-ERL_NIF_INIT(erl_fastpbkdf2, fastpbkdf2_nif_funcs, load, reload, upgrade, unload);
+ERL_NIF_INIT(fast_scram, fastpbkdf2_nif_funcs, load, reload, upgrade, unload);
