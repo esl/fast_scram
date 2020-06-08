@@ -1,0 +1,14 @@
+language: erlang
+dist: bionic
+branches:
+    only:
+        - master
+otp_release:
+    - 23.0.1
+    - 22.3
+    - 21.1
+install:
+    - rebar3 get-deps
+script:
+    - rebar3 as test ct
+    - rebar3 dialyzer
