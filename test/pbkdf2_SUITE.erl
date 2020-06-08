@@ -91,8 +91,8 @@ erlang_and_nif_are_equivalent_sha512(_Config) ->
 erlang_and_nif_are_equivalent_(Sha, NumberSha) ->
     Prop = ?FORALL({Pass, Salt, Count},
                    {binary(), binary(), range(2,20000)},
-                   erl_fastpbkdf2:fastpbkdf2_hmac_sha(NumberSha, Pass, Salt, Count)
-                       =:= erlang_pbkdf2:hi(Sha, Pass, Salt, Count)
+                   fast_scram:hi(NumberSha, Pass, Salt, Count)
+                       =:= erlang_scram:hi(Sha, Pass, Salt, Count)
                   ),
     ?assert(proper:quickcheck(Prop, [verbose, long_result,
                                      {numtests, 100},
@@ -105,7 +105,7 @@ realtime_test(_Config) ->
     A = crypto:strong_rand_bytes(64),
     B = crypto:strong_rand_bytes(64),
     Fun = fun() ->
-                  erl_fastpbkdf2:fastpbkdf2_hmac_sha(512, A, B, 10000)
+                  fast_scram:hi(512, A, B, 10000)
           end,
     #{mean := AverageJitter} = stats_latency:realtime_latency_on_load(Fun, 20, 5000),
     ?assert(AverageJitter < 50).
