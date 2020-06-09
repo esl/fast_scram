@@ -421,47 +421,6 @@ DECL_PBKDF2(sha512,
             sha512_extract,
             sha512_xor)
 
-void fastpbkdf2_hmac_sha1(const uint8_t *pw, size_t npw,
-                          const uint8_t *salt, size_t nsalt,
-                          uint32_t iterations,
-                          uint8_t *out, size_t nout)
-{
-  PBKDF2(sha1)(pw, npw, salt, nsalt, iterations, out, nout);
-}
-
-void fastpbkdf2_hmac_sha224(const uint8_t *pw, size_t npw,
-                            const uint8_t *salt, size_t nsalt,
-                            uint32_t iterations,
-                            uint8_t *out, size_t nout)
-{
-  PBKDF2(sha224)(pw, npw, salt, nsalt, iterations, out, nout);
-}
-
-void fastpbkdf2_hmac_sha256(const uint8_t *pw, size_t npw,
-                            const uint8_t *salt, size_t nsalt,
-                            uint32_t iterations,
-                            uint8_t *out, size_t nout)
-{
-  PBKDF2(sha256)(pw, npw, salt, nsalt, iterations, out, nout);
-}
-
-void fastpbkdf2_hmac_sha384(const uint8_t *pw, size_t npw,
-                            const uint8_t *salt, size_t nsalt,
-                            uint32_t iterations,
-                            uint8_t *out, size_t nout)
-{
-  PBKDF2(sha384)(pw, npw, salt, nsalt, iterations, out, nout);
-}
-
-void fastpbkdf2_hmac_sha512(const uint8_t *pw, size_t npw,
-                            const uint8_t *salt, size_t nsalt,
-                            uint32_t iterations,
-                            uint8_t *out, size_t nout)
-{
-  PBKDF2(sha512)(pw, npw, salt, nsalt, iterations, out, nout);
-}
-
-
 static int load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info) {
     return 0;
 }
@@ -523,7 +482,7 @@ fastpbkdf2_hmac_sha(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     {
         case 1:
             output = enif_make_new_binary(env, SHA_DIGEST_LENGTH, &result);
-            fastpbkdf2_hmac_sha1(
+            PBKDF2(sha1)(
                     password.data, password.size,
                     salt.data, salt.size,
                     iteration_count,
@@ -531,7 +490,7 @@ fastpbkdf2_hmac_sha(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
             break;
         case 224:
             output = enif_make_new_binary(env, SHA224_DIGEST_LENGTH, &result);
-            fastpbkdf2_hmac_sha224(
+            PBKDF2(sha224)(
                     password.data, password.size,
                     salt.data, salt.size,
                     iteration_count,
@@ -539,14 +498,14 @@ fastpbkdf2_hmac_sha(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
             break;
         case 256:
             output = enif_make_new_binary(env, SHA256_DIGEST_LENGTH, &result);
-            fastpbkdf2_hmac_sha256(
+            PBKDF2(sha256)(
                     password.data, password.size,
                     salt.data, salt.size,
                     iteration_count, output, SHA256_DIGEST_LENGTH);
             break;
         case 384:
             output = enif_make_new_binary(env, SHA384_DIGEST_LENGTH, &result);
-            fastpbkdf2_hmac_sha384(
+            PBKDF2(sha384)(
                     password.data, password.size,
                     salt.data, salt.size,
                     iteration_count,
@@ -554,7 +513,7 @@ fastpbkdf2_hmac_sha(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
             break;
         case 512:
             output = enif_make_new_binary(env, SHA512_DIGEST_LENGTH, &result);
-            fastpbkdf2_hmac_sha512(
+            PBKDF2(sha512)(
                     password.data, password.size,
                     salt.data, salt.size,
                     iteration_count,
