@@ -60,10 +60,17 @@ static inline void md_pad(uint8_t *block, size_t blocksz, size_t used, size_t ms
 }
 
 /* Internal function/type names for hash-specific things. */
+#define XSTRINGIFY(s) STRINGIFY(s)
+#define STRINGIFY(s) #s
+
 #define HMAC_CTX(_name) HMAC_ ## _name ## _ctx
 #define HMAC_INIT(_name) HMAC_ ## _name ## _init
 #define HMAC_UPDATE(_name) HMAC_ ## _name ## _update
 #define HMAC_FINAL(_name) HMAC_ ## _name ## _final
+
+#define HMAC_CTX_ROUND(_name) HMAC_ ## _name ## _ctx_round           // C struct
+#define HMAC_CTX_ROUND_RES(_name) res_HMAC_ ## _name ## _ctx_round   // Erlang Resource definition
+#define HMAC_CTX_ROUND_NAME(_name) XSTRINGIFY(HMAC_CTX_ROUND(_name)) // Erlang atom-name
 
 #define PBKDF2_F(_name) pbkdf2_f_ ## _name
 #define PBKDF2(_name) pbkdf2_ ## _name
@@ -74,6 +81,11 @@ typedef struct {
     ERL_NIF_TERM atom_sha256;
     ERL_NIF_TERM atom_sha384;
     ERL_NIF_TERM atom_sha512;
+    ErlNifResourceType* HMAC_CTX_ROUND_RES(sha1);
+    ErlNifResourceType* HMAC_CTX_ROUND_RES(sha224);
+    ErlNifResourceType* HMAC_CTX_ROUND_RES(sha256);
+    ErlNifResourceType* HMAC_CTX_ROUND_RES(sha384);
+    ErlNifResourceType* HMAC_CTX_ROUND_RES(sha512);
 } pbkdf2_st;
 
 /* This macro expands to decls for the whole implementation for a given
@@ -107,6 +119,14 @@ typedef struct {
     _ctx inner;                                                               \
     _ctx outer;                                                               \
   } HMAC_CTX(_name);                                                          \
+                                                                              \
+  typedef struct {                                                            \
+      HMAC_CTX(_name) startctx;                                               \
+      HMAC_CTX(_name) ctx;                                                    \
+      _ctx            result;                                                 \
+      uint8_t         Ublock[_blocksz];                                       \
+      uint32_t        iterations;                                             \
+  } HMAC_CTX_ROUND(_name);                                                    \
                                                                               \
   static inline void HMAC_INIT(_name)(HMAC_CTX(_name) *ctx,                   \
                                       const uint8_t *key, size_t nkey)        \
@@ -417,6 +437,33 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
     mod_st->atom_sha256 = enif_make_atom(env, "sha256");
     mod_st->atom_sha384 = enif_make_atom(env, "sha384");
     mod_st->atom_sha512 = enif_make_atom(env, "sha512");
+
+    mod_st->HMAC_CTX_ROUND_RES(sha1) = enif_open_resource_type(
+            env, NULL, HMAC_CTX_ROUND_NAME(sha1),
+            NULL, ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER, NULL
+        );
+
+    mod_st->HMAC_CTX_ROUND_RES(sha224) = enif_open_resource_type(
+            env, NULL, HMAC_CTX_ROUND_NAME(sha224),
+            NULL, ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER, NULL
+        );
+
+    mod_st->HMAC_CTX_ROUND_RES(sha256) = enif_open_resource_type(
+            env, NULL, HMAC_CTX_ROUND_NAME(sha256),
+            NULL, ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER, NULL
+        );
+
+    mod_st->HMAC_CTX_ROUND_RES(sha384) = enif_open_resource_type(
+            env, NULL, HMAC_CTX_ROUND_NAME(sha384),
+            NULL, ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER, NULL
+        );
+
+    mod_st->HMAC_CTX_ROUND_RES(sha512) = enif_open_resource_type(
+            env, NULL, HMAC_CTX_ROUND_NAME(sha512),
+            NULL, ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER, NULL
+        );
+
+    *priv_data = (void*) mod_st;
 
     return 0;
 }
