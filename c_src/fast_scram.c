@@ -14,6 +14,16 @@
 
 #include "erl_nif.h"
 
+#ifndef TIMESLICE_PERCENTAGE
+#define TIMESLICE_PERCENTAGE 5 // announce a timeslice of 5 percent when indicated
+#define ITERS_PER_SLOT 6
+/* On the single core of an 2,2 GHz Quad-Core Intel Core i7, in slightly below 1ms
+ * we achieve around 120 iterations for sha512.
+ * Also, we want to report percentage every 5% (TIMESLICE_PERCENTAGE).
+ * We therefore get that a slot in between iterations should take 6 iterations (ITERS_PER_SLOT).
+ */
+#endif
+
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
@@ -186,47 +196,56 @@ typedef struct {
   }                                                                           \
                                                                               \
   /* --- PBKDF2 --- */                                                        \
-  static inline ERL_NIF_TERM PBKDF2_F(_name)(ErlNifEnv *env,                  \
-                                     const HMAC_CTX(_name) *startctx,         \
-                                     const uint8_t *salt, size_t nsalt,       \
-                                     uint32_t iterations)                     \
+  ERL_NIF_TERM PBKDF2_F(_name)(ErlNifEnv *env,                                \
+                               int argc, const ERL_NIF_TERM argv[])           \
   {                                                                           \
-    uint8_t countbuf[4];                                                      \
-    write32_be((uint32_t)1, countbuf);                                        \
+    pbkdf2_st *mod_st = enif_priv_data(env);                                  \
+    HMAC_CTX_ROUND(_name) *round_st;                                          \
+    enif_get_resource(env, argv[0],                                           \
+            mod_st->HMAC_CTX_ROUND_RES(_name),                                \
+            ((void*) (&round_st)));                                           \
                                                                               \
-    /* Prepare loop-invariant padding block. */                               \
-    uint8_t Ublock[_blocksz];                                                 \
-    md_pad(Ublock, _blocksz, _hashsz, _blocksz + _hashsz);                    \
+    while (round_st->iterations > ITERS_PER_SLOT) {                           \
+        for (uint32_t i = 0; i < ITERS_PER_SLOT; ++i)                         \
+        {                                                                     \
+            /* Complete inner hash with previous U */                         \
+            _xcpy(&round_st->ctx.inner, &round_st->startctx.inner);           \
+            _xform(&round_st->ctx.inner, round_st->Ublock);                   \
+            _xtract(&round_st->ctx.inner, round_st->Ublock);                  \
+            /* Complete outer hash with inner output */                       \
+            _xcpy(&round_st->ctx.outer, &round_st->startctx.outer);           \
+            _xform(&round_st->ctx.outer, round_st->Ublock);                   \
+            _xtract(&round_st->ctx.outer, round_st->Ublock);                  \
+            _xxor(&round_st->result, &round_st->ctx.outer);                   \
+        }                                                                     \
+        round_st->iterations -= ITERS_PER_SLOT;                               \
                                                                               \
-    /* First iteration:                                                       \
-     *   U_1 = PRF(P, S || INT_32_BE(i))                                      \
-     */                                                                       \
-    HMAC_CTX(_name) ctx = *startctx;                                          \
-    HMAC_UPDATE(_name)(&ctx, salt, nsalt);                                    \
-    HMAC_UPDATE(_name)(&ctx, countbuf, sizeof countbuf);                      \
-    HMAC_FINAL(_name)(&ctx, Ublock);                                          \
-    _ctx result = ctx.outer;                                                  \
-                                                                              \
-    /* Subsequent iterations:                                                 \
-     *   U_c = PRF(P, U_{c-1})                                                \
-     */                                                                       \
-    for (uint32_t i = 1; i < iterations; i++)                                 \
-    {                                                                         \
-      /* Complete inner hash with previous U */                               \
-      _xcpy(&ctx.inner, &startctx->inner);                                    \
-      _xform(&ctx.inner, Ublock);                                             \
-      _xtract(&ctx.inner, Ublock);                                            \
-      /* Complete outer hash with inner output */                             \
-      _xcpy(&ctx.outer, &startctx->outer);                                    \
-      _xform(&ctx.outer, Ublock);                                             \
-      _xtract(&ctx.outer, Ublock);                                            \
-      _xxor(&result, &ctx.outer);                                             \
+        /* Schedule again but with iterations decremented */                  \
+        if (enif_consume_timeslice(env, TIMESLICE_PERCENTAGE)) {              \
+            return enif_schedule_nif(env, HMAC_CTX_ROUND_NAME(_name), 0,      \
+                    PBKDF2_F(_name), argc, argv);                             \
+        }                                                                     \
     }                                                                         \
                                                                               \
+    for (uint32_t i = 1; i < round_st->iterations; ++i)                       \
+    {                                                                         \
+        /* Complete inner hash with previous U */                             \
+        _xcpy(&round_st->ctx.inner, &round_st->startctx.inner);               \
+        _xform(&round_st->ctx.inner, round_st->Ublock);                       \
+        _xtract(&round_st->ctx.inner, round_st->Ublock);                      \
+        /* Complete outer hash with inner output */                           \
+        _xcpy(&round_st->ctx.outer, &round_st->startctx.outer);               \
+        _xform(&round_st->ctx.outer, round_st->Ublock);                       \
+        _xtract(&round_st->ctx.outer, round_st->Ublock);                      \
+        _xxor(&round_st->result, &round_st->ctx.outer);                       \
+    }                                                                         \
+                                                                              \
+    /* We're done, so we can release the resource */                          \
+    enif_release_resource(round_st);                                          \
     /* Reform result into output buffer. */                                   \
     ERL_NIF_TERM erl_result;                                                  \
     unsigned char *output = enif_make_new_binary(env, _hashsz, &erl_result);  \
-    _xtract(&result, output);                                                 \
+    _xtract(&round_st->result, output);                                       \
     return erl_result;                                                        \
   }                                                                           \
                                                                               \
@@ -235,12 +254,34 @@ typedef struct {
                      const uint8_t *salt, size_t nsalt,                       \
                      uint32_t iterations)                                     \
   {                                                                           \
-    assert(iterations);                                                       \
+    /* Retrieve the state resource descriptor from our priv data, */          \
+    /* and allocate a new resource structure */                               \
+    pbkdf2_st *mod_st = enif_priv_data(env);                                  \
+    HMAC_CTX_ROUND(_name) *round_st = enif_alloc_resource(                    \
+        mod_st->HMAC_CTX_ROUND_RES(_name),                                    \
+        sizeof(HMAC_CTX_ROUND(_name))                                         \
+    );                                                                        \
                                                                               \
-    HMAC_CTX(_name) ctx;                                                      \
-    HMAC_INIT(_name)(&ctx, pw, npw);                                          \
+    HMAC_INIT(_name)(&round_st->startctx, pw, npw);                           \
+    uint8_t countbuf[4];                                                      \
+    write32_be((uint32_t)1, countbuf);                                        \
                                                                               \
-    return PBKDF2_F(_name)(env, &ctx, salt, nsalt, iterations);               \
+    /* Prepare loop-invariant padding block. */                               \
+    md_pad(round_st->Ublock, _blocksz, _hashsz, _blocksz + _hashsz);          \
+                                                                              \
+    /* First iteration:                                                       \
+     *   U_1 = PRF(P, S || INT_32_BE(i))                                      \
+     */                                                                       \
+    round_st->ctx = round_st->startctx;                                       \
+    HMAC_UPDATE(_name)(&round_st->ctx, salt, nsalt);                          \
+    HMAC_UPDATE(_name)(&round_st->ctx, countbuf, sizeof countbuf);            \
+    HMAC_FINAL(_name)(&round_st->ctx, round_st->Ublock);                      \
+    round_st->result = round_st->ctx.outer;                                   \
+    round_st->iterations = iterations;                                        \
+                                                                              \
+    ERL_NIF_TERM state_term = enif_make_resource(env, round_st);              \
+    const ERL_NIF_TERM tmp_argv[] = {state_term};                             \
+    return PBKDF2_F(_name)(env, 1, tmp_argv);                                 \
   }
 
 
@@ -551,7 +592,7 @@ hi_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ErlNifFunc fastpbkdf2_nif_funcs[] = {
-    {"hi", 4, hi_nif, ERL_NIF_DIRTY_JOB_CPU_BOUND}
+    {"hi", 4, hi_nif}
 };
 
 ERL_NIF_INIT(fast_scram, fastpbkdf2_nif_funcs, load, reload, upgrade, unload);
