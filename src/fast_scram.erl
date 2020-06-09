@@ -3,7 +3,9 @@
 
 -export([hi/4]).
 
--spec hi(1 | 224 | 256 | 384 | 512, binary(), binary(), non_neg_integer()) -> binary().
+-type sha_type() :: crypto:sha1() | crypto:sha2().
+
+-spec hi(sha_type(), binary(), binary(), non_neg_integer()) -> binary().
 hi(_Hash, _Password, _Salt, _IterationCount) ->
     erlang:nif_error(not_loaded).
 

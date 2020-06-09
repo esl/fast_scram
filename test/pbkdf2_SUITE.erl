@@ -74,24 +74,24 @@ end_per_testcase(_TestCase, _Config) ->
 %%%===================================================================
 
 erlang_and_nif_are_equivalent_sha1(_Config) ->
-    erlang_and_nif_are_equivalent_(sha, 1).
+    erlang_and_nif_are_equivalent_(sha).
 
 erlang_and_nif_are_equivalent_sha224(_Config) ->
-    erlang_and_nif_are_equivalent_(sha224, 224).
+    erlang_and_nif_are_equivalent_(sha224).
 
 erlang_and_nif_are_equivalent_sha256(_Config) ->
-    erlang_and_nif_are_equivalent_(sha256, 256).
+    erlang_and_nif_are_equivalent_(sha256).
 
 erlang_and_nif_are_equivalent_sha384(_Config) ->
-    erlang_and_nif_are_equivalent_(sha384, 384).
+    erlang_and_nif_are_equivalent_(sha384).
 
 erlang_and_nif_are_equivalent_sha512(_Config) ->
-    erlang_and_nif_are_equivalent_(sha512, 512).
+    erlang_and_nif_are_equivalent_(sha512).
 
-erlang_and_nif_are_equivalent_(Sha, NumberSha) ->
+erlang_and_nif_are_equivalent_(Sha) ->
     Prop = ?FORALL({Pass, Salt, Count},
                    {binary(), binary(), range(2,20000)},
-                   fast_scram:hi(NumberSha, Pass, Salt, Count)
+                   fast_scram:hi(Sha, Pass, Salt, Count)
                        =:= erlang_scram:hi(Sha, Pass, Salt, Count)
                   ),
     ?assert(proper:quickcheck(Prop, [verbose, long_result,
