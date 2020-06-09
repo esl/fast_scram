@@ -159,13 +159,12 @@ static inline void md_pad(uint8_t *block, size_t blocksz, size_t used, size_t ms
                                                                               \
   /* --- PBKDF2 --- */                                                        \
   static inline void PBKDF2_F(_name)(const HMAC_CTX(_name) *startctx,         \
-                                     uint32_t counter,                        \
                                      const uint8_t *salt, size_t nsalt,       \
                                      uint32_t iterations,                     \
                                      uint8_t *out)                            \
   {                                                                           \
     uint8_t countbuf[4];                                                      \
-    write32_be(counter, countbuf);                                            \
+    write32_be((uint32_t)1, countbuf);                                        \
                                                                               \
     /* Prepare loop-invariant padding block. */                               \
     uint8_t Ublock[_blocksz];                                                 \
@@ -213,7 +212,7 @@ static inline void md_pad(uint8_t *block, size_t blocksz, size_t used, size_t ms
     HMAC_INIT(_name)(&ctx, pw, npw);                                          \
                                                                               \
     uint8_t block[_hashsz];                                                   \
-    PBKDF2_F(_name)(&ctx, 1, salt, nsalt, iterations, block);                 \
+    PBKDF2_F(_name)(&ctx, salt, nsalt, iterations, block);                    \
                                                                               \
     memcpy(out, block, _hashsz);                                              \
   }
