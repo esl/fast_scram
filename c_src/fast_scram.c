@@ -68,6 +68,14 @@ static inline void md_pad(uint8_t *block, size_t blocksz, size_t used, size_t ms
 #define PBKDF2_F(_name) pbkdf2_f_ ## _name
 #define PBKDF2(_name) pbkdf2_ ## _name
 
+typedef struct {
+    ERL_NIF_TERM atom_sha;
+    ERL_NIF_TERM atom_sha224;
+    ERL_NIF_TERM atom_sha256;
+    ERL_NIF_TERM atom_sha384;
+    ERL_NIF_TERM atom_sha512;
+} pbkdf2_st;
+
 /* This macro expands to decls for the whole implementation for a given
  * hash function.  Arguments are:
  *
@@ -396,7 +404,20 @@ DECL_PBKDF2(sha512,
             sha512_extract,
             sha512_xor)
 
-static int load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info) {
+static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
+{
+    (void) load_info;
+    pbkdf2_st* mod_st = enif_alloc(sizeof(pbkdf2_st));
+    if(mod_st == NULL) {
+        return 1;
+    }
+
+    mod_st->atom_sha = enif_make_atom(env, "sha");
+    mod_st->atom_sha224 = enif_make_atom(env, "sha224");
+    mod_st->atom_sha256 = enif_make_atom(env, "sha256");
+    mod_st->atom_sha384 = enif_make_atom(env, "sha384");
+    mod_st->atom_sha512 = enif_make_atom(env, "sha512");
+
     return 0;
 }
 
@@ -412,6 +433,7 @@ static int upgrade(ErlNifEnv* env, void** priv, void** old_priv, ERL_NIF_TERM in
 
 static void unload(ErlNifEnv* env, void* priv)
 {
+    enif_free(priv);
     return;
 }
 
@@ -427,9 +449,8 @@ ERL_NIF_TERM mk_error(ErlNifEnv* env, const char *error_msg)
 static ERL_NIF_TERM
 hi_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    int hash_number;
-    if (!enif_get_uint(env, argv[0], &hash_number))
-        return mk_error(env, "bad_hash");
+    if(argc != 4)
+        return enif_make_badarg(env);
 
     ErlNifBinary password;
     if (!enif_inspect_binary(env, argv[1], &password))
@@ -450,40 +471,35 @@ hi_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
      *  @p nsalt bytes at @p salt are the salt input.
      *  @p iterations is the PBKDF2 iteration count and must be non-zero.
      */
-    switch (hash_number)
-    {
-        case 1:
-            return PBKDF2(sha1)(env,
-                    password.data, password.size,
-                    salt.data, salt.size,
-                    iteration_count);
-            break;
-        case 224:
-            return PBKDF2(sha224)(env,
-                    password.data, password.size,
-                    salt.data, salt.size,
-                    iteration_count);
-            break;
-        case 256:
-            return PBKDF2(sha256)(env,
-                    password.data, password.size,
-                    salt.data, salt.size,
-                    iteration_count);
-            break;
-        case 384:
-            return PBKDF2(sha384)(env,
-                    password.data, password.size,
-                    salt.data, salt.size,
-                    iteration_count);
-            break;
-        case 512:
-            return PBKDF2(sha512)(env,
-                    password.data, password.size,
-                    salt.data, salt.size,
-                    iteration_count);
-            break;
-        default:
-            return enif_make_badarg(env);
+    pbkdf2_st *mod_st = (pbkdf2_st*) enif_priv_data(env);
+
+    if(enif_is_identical(argv[0], mod_st->atom_sha)) {
+        return PBKDF2(sha1)(env,
+                password.data, password.size,
+                salt.data, salt.size,
+                iteration_count);
+    } else if(enif_is_identical(argv[0], mod_st->atom_sha224)) {
+        return PBKDF2(sha224)(env,
+                password.data, password.size,
+                salt.data, salt.size,
+                iteration_count);
+    } else if(enif_is_identical(argv[0], mod_st->atom_sha256)) {
+        return PBKDF2(sha256)(env,
+                password.data, password.size,
+                salt.data, salt.size,
+                iteration_count);
+    } else if(enif_is_identical(argv[0], mod_st->atom_sha384)) {
+        return PBKDF2(sha384)(env,
+                password.data, password.size,
+                salt.data, salt.size,
+                iteration_count);
+    } else if(enif_is_identical(argv[0], mod_st->atom_sha512)) {
+        return PBKDF2(sha512)(env,
+                password.data, password.size,
+                salt.data, salt.size,
+                iteration_count);
+    } else {
+        return mk_error(env, "bad_hash");
     }
 }
 
