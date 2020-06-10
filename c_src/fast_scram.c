@@ -205,8 +205,8 @@ typedef struct {
             mod_st->HMAC_CTX_ROUND_RES(_name),                                \
             ((void*) (&round_st)));                                           \
                                                                               \
-    while (round_st->iterations > ITERS_PER_SLOT) {                           \
-        for (uint32_t i = 0; i < ITERS_PER_SLOT; ++i)                         \
+    while (1) {                                                               \
+        for (uint32_t i = 0; i < ITERS_PER_SLOT && i < round_st->iterations-1; ++i) \
         {                                                                     \
             /* Complete inner hash with previous U */                         \
             _xcpy(&round_st->ctx.inner, &round_st->startctx.inner);           \
@@ -218,6 +218,7 @@ typedef struct {
             _xtract(&round_st->ctx.outer, round_st->Ublock);                  \
             _xxor(&round_st->result, &round_st->ctx.outer);                   \
         }                                                                     \
+        if (round_st->iterations <= ITERS_PER_SLOT) break;                    \
         round_st->iterations -= ITERS_PER_SLOT;                               \
                                                                               \
         /* Schedule again but with iterations decremented */                  \
@@ -225,19 +226,6 @@ typedef struct {
             return enif_schedule_nif(env, HMAC_CTX_ROUND_NAME(_name), 0,      \
                     PBKDF2_F(_name), argc, argv);                             \
         }                                                                     \
-    }                                                                         \
-                                                                              \
-    for (uint32_t i = 1; i < round_st->iterations; ++i)                       \
-    {                                                                         \
-        /* Complete inner hash with previous U */                             \
-        _xcpy(&round_st->ctx.inner, &round_st->startctx.inner);               \
-        _xform(&round_st->ctx.inner, round_st->Ublock);                       \
-        _xtract(&round_st->ctx.inner, round_st->Ublock);                      \
-        /* Complete outer hash with inner output */                           \
-        _xcpy(&round_st->ctx.outer, &round_st->startctx.outer);               \
-        _xform(&round_st->ctx.outer, round_st->Ublock);                       \
-        _xtract(&round_st->ctx.outer, round_st->Ublock);                      \
-        _xxor(&round_st->result, &round_st->ctx.outer);                       \
     }                                                                         \
                                                                               \
     /* We're done, so we can release the resource */                          \
