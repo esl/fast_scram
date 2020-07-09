@@ -1,5 +1,5 @@
 {application, fast_scram,
- [{description, "An OTP library"},
+ [{description, "A fast Salted Challenge Response Authentication Mechanism"},
   {vsn, "0.1.0"},
   {registered, []},
   {applications,
@@ -9,7 +9,7 @@
    ]},
   {env,[]},
   {modules, []},
-
   {licenses, ["Apache 2.0"]},
-  {links, []}
+  {links, [{"GitHub", "https://github.com/esl/fast_scram/"}]},
+  {exclude_files, ["c_src/fast_scram.d"]}
  ]}.
