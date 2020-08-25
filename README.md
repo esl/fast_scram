@@ -1,5 +1,7 @@
-fast_scram
-=====
+# Fast SCRAM
+
+[![Build Status](https://travis-ci.com/esl/fast_scram.svg?branch=master)](https://travis-ci.org/esl/fast_scram)
+[![codecov](https://codecov.io/gh/esl/fast_scram/branch/master/graph/badge.svg)](https://codecov.io/gh/esl/fast_scram)
 
 `fast_scram` is an Erlang implementation of the _Salted Challenge Response Authentication Mechanism_,
 where the challenge algorithm is a carefully-optimised NIF, while respecting the latency properties
@@ -35,6 +37,76 @@ where `Hash` is the underlying hash function chosen as described by
 ```erlang
 -type sha_type() :: crypto:sha1() | crypto:sha2().
 ```
+
+### Full algorithm
+If you want to avoid reimplementing SCRAM again and again, you can use the extended API.
+The best example is that one of the tests. Given already configured states, the flow is as follows:
+```erlang
+    %% AUTH
+    {continue, ClientFirst, ClientState3} = fast_scram:mech_step(ClientState1, <<>>),
+    %% CHALLENGE
+    {continue, ServerFirst, ServerState4} = fast_scram:mech_step(ServerState2, ClientFirst),
+    %% RESPONSE
+    {continue, ClientFinal, ClientState5} = fast_scram:mech_step(ClientState3, ServerFirst),
+    %% SUCCESS
+    {ok, ServerFinal, ServerFinalState} = fast_scram:mech_step(ServerState4, ClientFinal),
+    %% Client successfully accepts the server's verifier
+    {ok, ClientFinal, ClientFinalState} = fast_scram:mech_step(ClientState5, ServerFinal).
+```
+
+The API is simple: `fast_scram:mech_step/2` takes a SCRAM state, and the last message it received
+(in the case of the first step of the client, this is obviously, and necessarily, empty).
+The return value is always a 3-tuple, tagged with either `ok` or `error`.
+If everything went right, the `ok` tuple returns the message that will be sent to the peer, and the
+new state ready for the next step.
+If any error arise, the `error` tuple returns an explanation of the error and the state as-it.
+
+How messages are delivered to peers is part of the protocol within which SCRAM is embedded:
+for example, in XMPP, messages are delivered as special stanzas with the SCRAM payload encoded in
+`base64`. So an XMPP client would do, for example, using [exml][exml]
+```erlang
+    {continue, Message, NewState} = fast_scram:mech_step(State, <<>>),
+    Contents = #xmlcdata{content = base64:encode(Message)},
+    Stanza = #xmlel{name = <<"auth">>,
+                    attrs = [{<<"xmlns">>, <<"urn:ietf:params:xml:ns:xmpp-sasl">>},
+                             {<<"mechanism">>, <<"SCRAM-SHA-1">>}],
+                    children = [Contents]},
+    %% send stanza
+```
+
+### Configuration
+This is the part that requires some knowledge of the SCRAM protocol.
+A ready SCRAM state is build using `fast_scram:mech_new/1`,
+which takes a map with the configuration parameters.
+
+The first and most important key is the `entity` key, which takes two values: `client` or `server`.
+The next necessary key is the desired `hash_method` method, that is, which of the `SHA` algorithms
+will be executed. Can be any of the OTP's `crypto:sha1() | crypto:sha2()`.
+
+Next keys depend on the chosen entity.
+If you want to configure a `client` state, then a `username` key is required.
+If you want to configure a `server` state, then `it_count` and `salt` are required.
+
+Next, for both cases, an `auth_data` key is required. The value for this key is a map containing the
+minimum necessary information for executing a SCRAM algorithm: often just a `password`.
+But often, to avoid the challenge penalty, servers and client cache certain keys, considering that a
+server often gives the same salt and iteration count for a specific client.
+So we can instead cache `salted_password`, or a pair `stored_key`-`server_key`,
+or a pair `client_key`-`server_key`. All these pairs can be given with a `password` as a fallback,
+if the algorithm was to need recalculation.
+
+If the client is being given any cached configuration, it will simply attempt that data regardless
+of the challenge that the server requests from him. If verification was desired instead of failing,
+the main config map can take keys `cached_it_count` and `cached_salt`, and these will be verified
+against the challenge requested by the server: if it matches, the cached data will be used. If it
+doesn't, all data will be recalculated using the `password` key in the `auth_data` map, provided it
+is available.
+
+Channel binding specification can also be given by `channel_binding => {Type, Data}`,
+where `Type` is the channel binding name, and `Data` is its associated payload.
+The default is `{undefined, <<>>}`, which will set the gs2 flag to none, that is, `<<"n">>`.
+If for example a client had channel binding, but saw the server no offering any,
+this client should set the flag to `{none, <<>>}`: this will send the gs2 flag as `<<"y">>`.
 
 
 ## Performance
@@ -73,3 +145,4 @@ The initial algorithm and optimisations were taken from Joseph Birr-Pixton's
 * SHAs and HMAC-SHA: [RFC6234](https://tools.ietf.org/html/rfc6234)
 
 [MIM]: https://github.com/esl/MongooseIM
+[exml]: https://github.com/esl/exml/
