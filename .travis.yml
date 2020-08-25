@@ -1,14 +1,25 @@
 language: erlang
+
 dist: bionic
+
 branches:
     only:
         - master
+
 otp_release:
-    - 23.0.1
+    - 23.0
     - 22.3
-    - 21.1
+    - 21.2
+
 install:
-    - rebar3 get-deps
+    - make
+    - make test-compile
+    - travis_retry pip install --user codecov
+
 script:
-    - rebar3 as test ct
-    - rebar3 dialyzer
+    - make test
+    - make dialyzer
+
+after_success:
+    - make codecov
+    - codecov
