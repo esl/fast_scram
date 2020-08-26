@@ -15,6 +15,10 @@
         parse_channel_binding/2,
         parse_server_error_or_verifier/2
         ]).
+-export([
+        append_to_auth_message/2,
+        append_to_auth_message_in_state/2
+        ]).
 
 -spec parse_gs2_cbind_flag(binary(), fast_scram_state()) -> parse_return().
 parse_gs2_cbind_flag(<<>>, _State) ->
@@ -149,6 +153,18 @@ parse_server_error_or_verifier(
     end;
 parse_server_error_or_verifier(<<"e=", Error/binary>>, _State) ->
     {error, Error}.
+
+-spec append_to_auth_message(scram_definitions(), binary()) -> scram_definitions().
+append_to_auth_message(ScramDefs, NewChunk) ->
+    CurrentAuthMessage = ScramDefs#scram_definitions.auth_message,
+    NewAppendedAuthMessage = <<CurrentAuthMessage/binary, NewChunk/binary>>,
+    ScramDefs#scram_definitions{auth_message = NewAppendedAuthMessage}.
+
+-spec append_to_auth_message_in_state(fast_scram_state(), binary()) -> fast_scram_state().
+append_to_auth_message_in_state(State, NewChunk) ->
+    ScramDefs0 = State#fast_scram_state.scram_definitions,
+    ScramDefs1 = append_to_auth_message(ScramDefs0, NewChunk),
+    State#fast_scram_state{scram_definitions = ScramDefs1}.
 
 %%--------------------------------------------------------------------
 %% @doc
