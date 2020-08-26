@@ -4,6 +4,36 @@
 -define(DEFAULT_NONCE_SIZE, 16).
 -define(f, #fast_scram_state).
 
+-export([mech_new/1, mech_append/2]).
+
+% We first match that the strictly required is available
+mech_new(#{entity := client,
+           hash_method := HashMethod, username := _, % Required for a client
+           auth_data := AuthData
+          } = Config) ->
+    St = ?f{step = 1, scram_definitions = #scram_definitions{hash_method = HashMethod}},
+    build_state(St, AuthData, Config);
+mech_new(#{entity := server,
+           hash_method := HashMethod,
+           it_count := _, salt := _,
+           auth_data := AuthData % Universally required, will be verified downstream
+          } = Config) ->
+    St = ?f{step = 2, scram_definitions = #scram_definitions{hash_method = HashMethod}},
+    build_state(St, AuthData, Config);
+mech_new(#{entity := server, hash_method := HashMethod} = Config) ->
+    St = ?f{step = 2, scram_definitions = #scram_definitions{hash_method = HashMethod}},
+    Config1 = ensure_full_config(St, Config),
+    Res = maps:fold(fun set_val_in_state/3, St, Config1),
+    case Res of
+        Res = ?f{} -> {continue, Res};
+        Error -> Error
+    end;
+mech_new(_) ->
+    {error, <<"Missing mandatory fields">>}.
+
+mech_append(?f{step = 2} = St, #{it_count := _, salt := _, auth_data := AuthData} = Config) ->
+    build_state(St, AuthData, Config).
+
 build_state(St, AuthData, Config) ->
     % Then we verify that the scram data provided is exact
     case verify_mandatory_scram_data(maps:keys(AuthData)) of
