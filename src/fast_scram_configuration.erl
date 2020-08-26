@@ -4,6 +4,53 @@
 -define(DEFAULT_NONCE_SIZE, 16).
 -define(f, #fast_scram_state).
 
+build_state(St, AuthData, Config) ->
+    % Then we verify that the scram data provided is exact
+    case verify_mandatory_scram_data(maps:keys(AuthData)) of
+        true ->
+            Config1 = ensure_full_config(St, Config),
+            ToFoldThrough = maps:merge(AuthData, maps:without([auth_data], Config1)),
+            Res = maps:fold(fun set_val_in_state/3, St, ToFoldThrough),
+            case Res of
+                Res = ?f{} -> {ok, Res};
+                Error -> Error
+            end;
+        false ->
+            {error, <<"Invalid authentication configuration">>}
+    end.
+
+ensure_full_config(?f{nonce = #nonce{client = C, server = S}}, Config)
+  when C == <<>>, S == <<>> ->
+    case (not maps:is_key(nonce_size, Config) andalso not maps:is_key(nonce, Config)) of
+        true -> Config#{nonce_size => ?DEFAULT_NONCE_SIZE};
+        _ -> Config
+    end;
+ensure_full_config(?f{}, Config) ->
+    Config.
+
+% It will get just a combination of the given atoms and verify that they are the exact one
+% Correct combinations:
+%   password alone
+%       For all other methods, a cached challenge together with a password
+%       could be given for verification. If a cached challenge is available,
+%       we first verify if it matches the one given by the server
+%   salted_password
+%   stored_key & server_key
+%   client_key & server_key
+-type auth_data() :: password | salted_password | client_key | stored_key | server_key.
+-spec verify_mandatory_scram_data([auth_data()]) -> boolean().
+verify_mandatory_scram_data(List) ->
+    case lists:sort(List) of
+        [password] -> true;
+        [salted_password] -> true;
+        [password, salted_password] -> true;
+        [password, server_key, stored_key] -> true;
+        [client_key, password, server_key] -> true;
+        [client_key, server_key] -> true;
+        [server_key, stored_key] -> true;
+        _ -> false
+    end.
+
 %% @doc This only adds a key into the state, verifying typeness, but not if it is repeated.
 -type option() :: atom().
 -type value() :: term().
