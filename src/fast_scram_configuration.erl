@@ -8,43 +8,43 @@
 
 % We first match that the strictly required is available
 mech_new(#{entity := client,
-           hash_method := HashMethod, username := _, % Required for a client
+           hash_method := HashMethod,
+           username := _,
            auth_data := AuthData
           } = Config) ->
     St = ?f{step = 1, scram_definitions = #scram_definitions{hash_method = HashMethod}},
-    build_state(St, AuthData, Config);
+    Res = build_state(St, AuthData, Config),
+    maybe_tag_ok(Res);
 mech_new(#{entity := server,
            hash_method := HashMethod,
-           it_count := _, salt := _,
-           auth_data := AuthData % Universally required, will be verified downstream
-          } = Config) ->
-    St = ?f{step = 2, scram_definitions = #scram_definitions{hash_method = HashMethod}},
-    build_state(St, AuthData, Config);
-mech_new(#{entity := server, hash_method := HashMethod} = Config) ->
+           retrieve_mechanism := Fun
+          } = Config)
+  when is_function(Fun, 1); is_function(Fun, 2) ->
     St = ?f{step = 2, scram_definitions = #scram_definitions{hash_method = HashMethod}},
     Config1 = ensure_full_config(St, Config),
     Res = maps:fold(fun set_val_in_state/3, St, Config1),
-    case Res of
-        Res = ?f{} -> {continue, Res};
-        Error -> Error
-    end;
+    maybe_tag_ok(Res);
 mech_new(_) ->
-    {error, <<"Missing mandatory fields">>}.
+    {error, <<"Wrong configuration">>}.
 
+maybe_tag_ok(?f{} = St) ->
+    {ok, St};
+maybe_tag_ok(Error) ->
+    Error.
+
+-spec mech_append(fast_scram_state(), configuration()) ->
+    fast_scram_state() | {error, binary()}.
 mech_append(?f{step = 2} = St, #{it_count := _, salt := _, auth_data := AuthData} = Config) ->
-    build_state(St, AuthData, Config).
+    build_state(St, AuthData, Config);
+mech_append(_, _) ->
+    {error, <<"Wrong configuration">>}.
 
 build_state(St, AuthData, Config) ->
-    % Then we verify that the scram data provided is exact
     case verify_mandatory_scram_data(maps:keys(AuthData)) of
         true ->
             Config1 = ensure_full_config(St, Config),
             ToFoldThrough = maps:merge(AuthData, maps:without([auth_data], Config1)),
-            Res = maps:fold(fun set_val_in_state/3, St, ToFoldThrough),
-            case Res of
-                Res = ?f{} -> {ok, Res};
-                Error -> Error
-            end;
+            maps:fold(fun set_val_in_state/3, St, ToFoldThrough);
         false ->
             {error, <<"Invalid authentication configuration">>}
     end.
@@ -67,8 +67,7 @@ ensure_full_config(?f{}, Config) ->
 %   salted_password
 %   stored_key & server_key
 %   client_key & server_key
--type auth_data() :: password | salted_password | client_key | stored_key | server_key.
--spec verify_mandatory_scram_data([auth_data()]) -> boolean().
+-spec verify_mandatory_scram_data([auth_keys()]) -> boolean().
 verify_mandatory_scram_data(List) ->
     case lists:sort(List) of
         [password] -> true;
