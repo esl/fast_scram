@@ -13,7 +13,8 @@
         ]).
 
 -export([
-         scram_definitions_pipe/3
+         scram_definitions_pipe/3,
+         check_proof/2
         ]).
 
 %%%===================================================================
@@ -163,3 +164,20 @@ partial_compute(Scram =
 partial_compute(Scram) ->
     ?LOG_DEBUG(#{what => scram_no_pipe_match}),
     Scram.
+
+-spec check_proof(scram_definitions(), binary()) -> ok | {error, binary()}.
+check_proof(#scram_definitions{client_proof = CalculatedClientProof}, GivenClientProof)
+  when CalculatedClientProof =:= GivenClientProof ->
+    ok;
+check_proof(#scram_definitions{hash_method = HashMethod,
+                               client_proof = <<>>,
+                               stored_key = StoredKey,
+                               client_signature = ClientSignature}, GivenClientProof) ->
+    ClientKey = client_proof(GivenClientProof, ClientSignature),
+    CalculatedStoredKey = stored_key(HashMethod, ClientKey),
+    case CalculatedStoredKey =:= StoredKey of
+        true -> ok;
+        _ -> {error, <<"invalid-proof">>}
+    end;
+check_proof(_, _) ->
+    {error, <<"invalid-proof">>}.

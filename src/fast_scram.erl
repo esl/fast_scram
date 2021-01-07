@@ -28,6 +28,16 @@
          mech_set/3
         ]).
 
+-export([
+         salted_password/4,
+         client_key/2,
+         stored_key/2,
+         client_signature/3,
+         client_proof/2,
+         server_key/2,
+         server_signature/3
+        ]).
+
 mech_new(Config) ->
     fast_scram_configuration:mech_new(Config).
 
@@ -124,7 +134,7 @@ mech_step(#fast_scram_state{step = 4} = State, ClientIn) ->
             GivenClientProof = maps:get(client_proof, PrivData),
             Scram = fast_scram_definitions:scram_definitions_pipe(Scram0, Challenge, PrivData),
             NewState1 = NewState#fast_scram_state{scram_definitions = Scram},
-            case check_proof(Scram, GivenClientProof) of
+            case fast_scram_definitions:check_proof(Scram, GivenClientProof) of
                 ok ->
                     ServerSignature = Scram#scram_definitions.server_signature,
                     ServerLastMessage = fast_scram_attributes:server_final_message(
@@ -164,23 +174,6 @@ apply_result(Config = #{}, State) ->
     fast_scram_configuration:mech_append(State, Config);
 apply_result({error, Reason}, _) ->
     {error, Reason}.
-
--spec check_proof(scram_definitions(), binary()) -> ok | {error, binary()}.
-check_proof(#scram_definitions{client_proof = CalculatedClientProof}, GivenClientProof)
-  when CalculatedClientProof =:= GivenClientProof ->
-    ok;
-check_proof(#scram_definitions{hash_method = HashMethod,
-                               client_proof = <<>>,
-                               stored_key = StoredKey,
-                               client_signature = ClientSignature}, GivenClientProof) ->
-    ClientKey = fast_scram_definitions:client_proof(GivenClientProof, ClientSignature),
-    CalculatedStoredKey = fast_scram_definitions:stored_key(HashMethod, ClientKey),
-    case CalculatedStoredKey =:= StoredKey of
-        true -> ok;
-        _ -> {error, <<"invalid-proof">>}
-    end;
-check_proof(_, _) ->
-    {error, <<"invalid-proof">>}.
 
 %%%===================================================================
 %%% SCRAM parsing full messages
@@ -303,6 +296,37 @@ apply_rules_until_match(Input, [Rule | RulesLeft], State) ->
         {error, Reason} ->
             {error, Reason}
     end.
+
+%%%===================================================================
+%%% Expose definitions from internal modules
+%%%===================================================================
+-spec salted_password(sha_type(), binary(), binary(), non_neg_integer()) -> binary().
+salted_password(Sha, Password, Salt, IterationCount) ->
+    ?MODULE:hi(Sha, Password, Salt, IterationCount).
+
+-spec client_key(sha_type(), binary()) -> binary().
+client_key(Sha, SaltedPassword) ->
+    fast_scram_definitions:client_key(Sha, SaltedPassword).
+
+-spec stored_key(sha_type(), binary()) -> binary().
+stored_key(Sha, ClientKey) ->
+    fast_scram_definitions:stored_key(Sha, ClientKey).
+
+-spec client_signature(sha_type(), binary(), binary()) -> binary().
+client_signature(Sha, StoredKey, AuthMessage) ->
+    fast_scram_definitions:client_signature(Sha, StoredKey, AuthMessage).
+
+-spec client_proof(binary(), binary()) -> binary().
+client_proof(ClientKey, ClientSignature) ->
+    fast_scram_definitions:client_proof(ClientKey, ClientSignature).
+
+-spec server_key(sha_type(), binary()) -> binary().
+server_key(Sha, SaltedPassword) ->
+    fast_scram_definitions:server_key(Sha, SaltedPassword).
+
+-spec server_signature(sha_type(), binary(), binary()) -> binary().
+server_signature(Sha, ServerKey, AuthMessage) ->
+    fast_scram_definitions:server_signature(Sha, ServerKey, AuthMessage).
 
 %%%===================================================================
 %%% NIF
