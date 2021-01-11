@@ -111,6 +111,11 @@ And for a server:
       retrieve_mechanism => fun(Username) -> MoreConfig end}
 ```
 
+*NOTE*: SCRAM requires the username and password to be Normalized using the SASLprep profile of the
+stringprep algorithm. Stringprepping algorithms would introduce a dependency to this repository that
+I didn't want to, so it is left to the user of this plugin to provide stringprepped binaries from
+the get-go.
+
 The first and most important key is the `entity` key,
 which takes two values: `client` or `server`.
 The next necessary key is the negotiated `hash_method`,
