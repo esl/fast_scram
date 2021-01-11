@@ -62,7 +62,7 @@ The second element is always a binary, and the third is always the scram state.
 ```erlang
 -spec mech_step(fast_scram_state(), binary()) ->
     {ok,       final_message(), fast_scram_state()} |
-    {continue, next_message(),  fast_scram_state()} |
+    {continue,  next_message(), fast_scram_state()} |
     {error,    error_message(), fast_scram_state()}.
 ```
 
@@ -139,7 +139,7 @@ is available.
 Channel binding specification can also be given by `channel_binding => {Type, Data}`,
 where `Type` is the channel binding name, and `Data` is its associated payload.
 The default is `{undefined, <<>>}`, which will set the gs2 flag to no binding, that is, `<<"n">>`.
-If for example a client had channel binding, but saw the server no offering any,
+If for example a client had channel binding, but saw the server not offering any,
 this client should set the flag to `{none, <<>>}`: this will send the gs2 flag as `<<"y">>`.
 
 ### Server retrieval of the client's data

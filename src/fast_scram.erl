@@ -13,7 +13,7 @@
 
 -spec mech_step(fast_scram_state(), binary()) ->
     {ok,       final_message(), fast_scram_state()} |
-    {continue, next_message(),  fast_scram_state()} |
+    {continue,  next_message(), fast_scram_state()} |
     {error,    error_message(), fast_scram_state()}.
 
 -export([hi/4]).
