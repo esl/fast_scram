@@ -16,7 +16,7 @@
     {continue,  next_message(), fast_scram_state()} |
     {error,    error_message(), fast_scram_state()}.
 
--export([hi/4]).
+-export([hi/4, pbkdf2_block/5]).
 
 -export([mech_new/1,
          mech_step/2
@@ -332,7 +332,11 @@ server_signature(Sha, ServerKey, AuthMessage) ->
 %%% NIF
 %%%===================================================================
 -spec hi(sha_type(), binary(), binary(), non_neg_integer()) -> binary().
-hi(_Hash, _Password, _Salt, _IterationCount) ->
+hi(Hash, Password, Salt, IterationCount) ->
+    pbkdf2_block(Hash, Password, Salt, IterationCount, 1).
+
+-spec pbkdf2_block(sha_type(), binary(), binary(), non_neg_integer(), non_neg_integer()) -> binary().
+pbkdf2_block(_Hash, _Password, _Salt, _IterationCount, _BlockSize) ->
     erlang:nif_error(not_loaded).
 
 -spec load() -> any().
