@@ -24,6 +24,7 @@ Building is as easy as `rebar3 compile`, and using it in your projects as
 
 
 ## Using
+### SCRAM
 In SCRAM, a `SaltedPassword` is defined as
 ```
 SaltedPassword := Hi(Normalize(password), salt, i)
@@ -37,6 +38,15 @@ where `Hash` is the underlying hash function chosen as described by
 ```erlang
 -type sha_type() :: crypto:sha1() | crypto:sha2().
 ```
+
+### PBKDF2
+If what you desire is PBKDF2 (I assume that if that is what you want, then you know your RFC), in a
+way that allows you to request longer derived keys, you may use `fast_scram:pbkdf2_block/5` with a
+given block index and do the indexing and chunking yourself, or use `fast_scram:pbkdf2/5` for the
+full algorithm. However, it doesn't really add much more entropy to the derived key to use outputs
+larger than the output of the underlying hash, so you might as well, use `pbkdf2` where dkLen is
+that of the hash's output, which is the same than `pbkdf2_block` with index `1`, which is simply the
+`hi` function.
 
 ### Full algorithm
 If you want to avoid reimplementing SCRAM again and again, you can use the extended API.
