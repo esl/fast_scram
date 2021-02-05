@@ -240,7 +240,7 @@ typedef struct {
   static inline ERL_NIF_TERM PBKDF2(_name)(ErlNifEnv *env,                    \
                      const uint8_t *pw, size_t npw,                           \
                      const uint8_t *salt, size_t nsalt,                       \
-                     uint32_t iterations)                                     \
+                     uint32_t iterations, uint32_t counter)                   \
   {                                                                           \
     /* Retrieve the state resource descriptor from our priv data, */          \
     /* and allocate a new resource structure */                               \
@@ -252,7 +252,7 @@ typedef struct {
                                                                               \
     HMAC_INIT(_name)(&round_st->startctx, pw, npw);                           \
     uint8_t countbuf[4];                                                      \
-    write32_be((uint32_t)1, countbuf);                                        \
+    write32_be(counter, countbuf);                                            \
                                                                               \
     /* Prepare loop-invariant padding block. */                               \
     md_pad(round_st->Ublock, _blocksz, _hashsz, _blocksz + _hashsz);          \
@@ -523,9 +523,9 @@ ERL_NIF_TERM mk_error(ErlNifEnv* env, const char *error_msg)
 }
 
 static ERL_NIF_TERM
-hi_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+pbkdf2_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    if(argc != 4)
+    if(argc != 5)
         return enif_make_badarg(env);
 
     ErlNifBinary password;
@@ -538,9 +538,15 @@ hi_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 
     int iteration_count;
     if (!enif_get_int(env, argv[3], &iteration_count))
-        return mk_error(env, "bad_count");
+        return mk_error(env, "bad_iteration_count");
     if (iteration_count <= 0)
-        return mk_error(env, "bad_count");
+        return mk_error(env, "bad_iteration_count");
+
+    int counter;
+    if (!enif_get_int(env, argv[4], &counter))
+        return mk_error(env, "bad_block_counter");
+    if (counter <= 0)
+        return mk_error(env, "bad_block_counter");
 
     /** Calculates PBKDF2-HMAC-SHA
      *  @p npw bytes at @p pw are the password input.
@@ -553,34 +559,34 @@ hi_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         return PBKDF2(sha1)(env,
                 password.data, password.size,
                 salt.data, salt.size,
-                iteration_count);
+                iteration_count, counter);
     } else if(enif_is_identical(argv[0], mod_st->atom_sha224)) {
         return PBKDF2(sha224)(env,
                 password.data, password.size,
                 salt.data, salt.size,
-                iteration_count);
+                iteration_count, counter);
     } else if(enif_is_identical(argv[0], mod_st->atom_sha256)) {
         return PBKDF2(sha256)(env,
                 password.data, password.size,
                 salt.data, salt.size,
-                iteration_count);
+                iteration_count, counter);
     } else if(enif_is_identical(argv[0], mod_st->atom_sha384)) {
         return PBKDF2(sha384)(env,
                 password.data, password.size,
                 salt.data, salt.size,
-                iteration_count);
+                iteration_count, counter);
     } else if(enif_is_identical(argv[0], mod_st->atom_sha512)) {
         return PBKDF2(sha512)(env,
                 password.data, password.size,
                 salt.data, salt.size,
-                iteration_count);
+                iteration_count, counter);
     } else {
         return mk_error(env, "bad_hash");
     }
 }
 
 static ErlNifFunc fastpbkdf2_nif_funcs[] = {
-    {"hi", 4, hi_nif}
+    {"pbkdf2_block", 5, pbkdf2_nif}
 };
 
 ERL_NIF_INIT(fast_scram, fastpbkdf2_nif_funcs, load, reload, upgrade, unload);
