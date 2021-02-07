@@ -1,7 +1,8 @@
 # Fast SCRAM
 
-[![Build Status](https://travis-ci.com/esl/fast_scram.svg?branch=master)](https://travis-ci.org/esl/fast_scram)
+[![Actions Status](https://github.com/esl/fast_scram/workflows/ci/badge.svg)](https://github.com/esl/fast_scram/actions)
 [![codecov](https://codecov.io/gh/esl/fast_scram/branch/master/graph/badge.svg)](https://codecov.io/gh/esl/fast_scram)
+[![Hex](http://img.shields.io/hexpm/v/fast_scram.svg)](https://hex.pm/packages/fast_scram)
 
 `fast_scram` is an Erlang implementation of the _Salted Challenge Response Authentication Mechanism_,
 where the challenge algorithm is a carefully-optimised NIF, while respecting the latency properties
