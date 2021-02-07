@@ -1,0 +1,28 @@
+name: ci
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: OTP ${{matrix.otp}}
+    strategy:
+      matrix:
+        otp: ['23.2', '22.3', '21.3']
+    runs-on: 'ubuntu-20.04'
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ErlGang/setup-erlang@v1.0.0
+        with:
+          otp-version: ${{ matrix.otp }}
+      - run: make rebar3
+      - run: make
+      - run: make test
+      - run: make dialyzer
+      - run: make codecov
+      - run: pip install --user codecov
+      - run: /home/runner/.local/bin/codecov
