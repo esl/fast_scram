@@ -4,15 +4,10 @@
 [![codecov](https://codecov.io/gh/esl/fast_scram/branch/master/graph/badge.svg)](https://codecov.io/gh/esl/fast_scram)
 [![Hex](http://img.shields.io/hexpm/v/fast_scram.svg)](https://hex.pm/packages/fast_scram)
 
-`fast_scram` is an Erlang implementation of the _Salted Challenge Response Authentication Mechanism_,
-where the challenge algorithm is a carefully-optimised NIF, while respecting the latency properties
-of the BEAM and the functional aspect of Erlang as a language.
+`fast_scram` is a purely-functional Erlang implementation of the _Salted Challenge Response Authentication Mechanism_, where the challenge algorithm is implemented as a carefully-optimised NIF using [fast_pbkdf2][fast_pbkdf2].
 
 ## Building
-`fast_scram` is a rebar3-compatible OTP application, that uses the
-[port_compiler](https://github.com/blt/port_compiler) for the C part of the code.
-
-Building is as easy as `rebar3 compile`, and using it in your projects as
+`fast_scram` is a rebar3-compatible OTP application, building is as easy as `rebar3 compile`, and using it in your projects as
 ```erlang
 {plugins, [pc]}.
 {provider_hooks,
@@ -23,15 +18,14 @@ Building is as easy as `rebar3 compile`, and using it in your projects as
  [{fast_scram, {git, "https://github.com/esl/fast_scram.git", {branch, "master"}}}]}.
 ```
 
-
 ## Using
 ### SCRAM
 In SCRAM, a `SaltedPassword` is defined as
 ```
 SaltedPassword := Hi(Normalize(password), salt, i)
 ```
-This algorithm is precisely the one that pays the challenge, and it is the one we solve here with
-the best performance. Simply do:
+This algorithm is precisely the one that pays the challenge, and it is the one we solve here with the best performance.
+Simply do:
 ```erlang
 SaltedPassword = fast_scram:hi(Hash, Password, Salt, IterationCount)
 ```
@@ -39,15 +33,6 @@ where `Hash` is the underlying hash function chosen as described by
 ```erlang
 -type sha_type() :: crypto:sha1() | crypto:sha2().
 ```
-
-### PBKDF2
-If what you desire is PBKDF2 (I assume that if that is what you want, then you know your RFC), in a
-way that allows you to request longer derived keys, you may use `fast_scram:pbkdf2_block/5` with a
-given block index and do the indexing and chunking yourself, or use `fast_scram:pbkdf2/5` for the
-full algorithm. However, it doesn't really add much more entropy to the derived key to use outputs
-larger than the output of the underlying hash, so you might as well, use `pbkdf2` where dkLen is
-that of the hash's output, which is the same than `pbkdf2_block` with index `1`, which is simply the
-`hi` function.
 
 ### Full algorithm
 If you want to avoid reimplementing SCRAM again and again, you can use the extended API.
@@ -219,30 +204,18 @@ See examples below.
 ## Performance
 
 ### The problem
-SCRAM is a challenge-response authentication method, that is, it forces the client to compute a
-challenge in order to authenticate him. But when the server implementation is slower than that
-of an attacker, it makes the server vulnerable to DoS by hogging itself with computations.
+SCRAM is a challenge-response authentication method, that is, it forces the client to compute a challenge in order to authenticate him.
+But when the server implementation is slower than that of an attacker, it makes the server vulnerable to DoS by hogging itself with computations.
 We could see that on the CI and load-testing pipelines of [MongooseIM][MIM] for example.
 
 ### The solution
-Is partial. We don't expect to have the fastest implementation, as that would be purely C code on
-GPUs, so unfortunately an attacker will pretty much always have better chances there.  _But_ we can
-make the computation cheap enough for us that other computations —like the load of a session
-establishment— will be more relevant than that of the challenge; and also that other defence
-mechanisms like IP blacklisting or traffic shaping, will fire in good time.
+Is partial. We don't expect to have the fastest implementation, as that would be purely C code on GPUs, so unfortunately an attacker will pretty much always have better chances there.
+_But_ we can make the computation cheap enough for us that other computations —like the load of a session establishment— will be more relevant than that of the challenge;
+and also that other defence mechanisms like IP blacklisting or traffic shaping, will fire in good time.
 
 ### The outcome
-On average it's 10x faster on the machines I've tested it (you can compare using the provided module
-in `./benchmarks/measurements.erl`), but while the erlang implementation consumes memory linearly to
-the iteration count (1M it count with 120 clients quickly allocated 7GB of RAM, and 1M is common for
-password managers for example), the NIF implementation does not allocate any more memory. Also, the
-NIFS spend all of their time in user level alone, while the erlang one jumps to system calls in
-around ~2% of the time (I'd guess due to some heavy allocation and garbage collection patterns).
-
-
-## Credit where credit is due
-The initial algorithm and optimisations were taken from Joseph Birr-Pixton's
-[fastpbkdf2](https://github.com/ctz/fastpbkdf2)'s repository.
+It all boils down to the right PBKDF2 implementation, as done in [fast_pbkdf2][fast_pbkdf2], which is on average 10x faster on the machines I've tested it.
+But while the erlang implementation consumes memory linearly to the iteration count, the NIF implementation does not allocate any more memory.
 
 ## Read more:
 * SCRAM: [RFC5802](https://tools.ietf.org/html/rfc5802)
@@ -253,3 +226,4 @@ The initial algorithm and optimisations were taken from Joseph Birr-Pixton's
 
 [MIM]: https://github.com/esl/MongooseIM
 [exml]: https://github.com/esl/exml/
+[fast_pbkdf2]: https://hex.pm/packages/fast_scram
