@@ -27,7 +27,7 @@ mask(Key, Data) ->
     C = A bxor B,
     <<C:KeySize>>.
 
--if(?OTP_RELEASE >= 22).
+-if(?OTP_RELEASE >= 23).
 crypto_hmac(Sha, Bin1, Bin2) ->
     crypto:mac(hmac, Sha, Bin1, Bin2).
 -else.
