@@ -27,6 +27,9 @@ mech_new(#{entity := server,
 mech_new(_) ->
     {error, <<"Wrong configuration">>}.
 
+-spec maybe_tag_ok(fast_scram_state()) -> {ok, fast_scram_state()};
+                  ({error, T1, T2}) -> {error, T1, T2}
+    when T1 :: term(), T2 :: term().
 maybe_tag_ok(?f{} = St) ->
     {ok, St};
 maybe_tag_ok(Error) ->

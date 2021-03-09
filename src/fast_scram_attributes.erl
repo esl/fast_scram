@@ -117,6 +117,7 @@ proof(Proof)->
 % client-first-message-bare =
 %                   [reserved-mext ","]
 %                   username "," nonce ["," extensions]
+-spec client_first_message_bare(map(), nonce()) -> binary().
 client_first_message_bare(#{username := Username}, Nonce)->
     <<(reserved_mext())/binary,
       (username(Username))/binary, ",",
@@ -132,6 +133,7 @@ client_final_message_without_proof(CBConfig, Nonce, Data) ->
 
 % client-first-message =
 %                   gs2-header client-first-message-bare
+-spec client_first_message(channel_binding(), nonce(), map()) -> {binary(), binary()}.
 client_first_message(CbConfig, Nonce, Data) ->
     GS2Header = gs2_header(CbConfig, Data),
     ClientFirstMessageBare = client_first_message_bare(Data, Nonce),

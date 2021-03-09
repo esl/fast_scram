@@ -15,7 +15,9 @@
                             | fun((username(), fast_scram_state()) ->
                                     {configuration(), fast_scram_state()}).
 
--type parse_return() :: {ok, fast_scram_state()} | {error, binary()}.
+-type parse_return() :: {ok, fast_scram_state()} |
+                        {skip_rule, fast_scram_state()} |
+                        {error, binary()}.
 
 -record(nonce, {
           client = <<>> :: binary(),
