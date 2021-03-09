@@ -1,6 +1,6 @@
 {application, fast_scram,
  [{description, "A fast Salted Challenge Response Authentication Mechanism"},
-  {vsn, "0.3.0"},
+  {vsn, "0.4.0"},
   {registered, []},
   {applications,
    [kernel,
@@ -10,6 +10,5 @@
   {env,[]},
   {modules, []},
   {licenses, ["Apache 2.0"]},
-  {links, [{"GitHub", "https://github.com/esl/fast_scram/"}]},
-  {exclude_files, ["c_src/fast_scram.d"]}
+  {links, [{"GitHub", "https://github.com/esl/fast_scram/"}]}
  ]}.
