@@ -226,4 +226,4 @@ But while the erlang implementation consumes memory linearly to the iteration co
 
 [MIM]: https://github.com/esl/MongooseIM
 [exml]: https://github.com/esl/exml/
-[fast_pbkdf2]: https://hex.pm/packages/fast_scram
+[fast_pbkdf2]: https://hex.pm/packages/fast_pbkdf2
