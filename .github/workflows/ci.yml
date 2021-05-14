@@ -12,8 +12,10 @@ jobs:
     name: OTP ${{matrix.otp}}
     strategy:
       matrix:
-        otp: ['23.2', '22.3', '21.3']
+        otp: ['24.0', '23.3', '22.3', '21.3']
     runs-on: 'ubuntu-20.04'
+    env:
+      OTPVER: ${{ matrix.otp }}
     steps:
       - uses: actions/checkout@v2
       - uses: ErlGang/setup-erlang@v1.0.0
@@ -23,10 +25,10 @@ jobs:
       - run: make
       - run: make test
       - run: make dialyzer
-        if: ${{ matrix.otp == '23.2' }}
+        if: ${{ matrix.otp == '24.0' }}
       - run: make codecov
-        if: ${{ matrix.otp == '23.2' }}
+        if: ${{ matrix.otp == '24.0' }}
       - run: pip install --user codecov
-        if: ${{ matrix.otp == '23.2' }}
+        if: ${{ matrix.otp == '24.0' }}
       - run: /home/runner/.local/bin/codecov
-        if: ${{ matrix.otp == '23.2' }}
+        if: ${{ matrix.otp == '24.0' }}
