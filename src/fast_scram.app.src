@@ -5,7 +5,8 @@
   {applications,
    [kernel,
     stdlib,
-    crypto
+    crypto,
+    fast_pbkdf2
    ]},
   {env,[]},
   {modules, []},
