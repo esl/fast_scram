@@ -1,8 +1,8 @@
 {"1.2.0",
-[{<<"fast_pbkdf2">>,{pkg,<<"fast_pbkdf2">>,<<"1.0.2">>},0}]}.
+[{<<"fast_pbkdf2">>,{pkg,<<"fast_pbkdf2">>,<<"1.0.3">>},0}]}.
 [
 {pkg_hash,[
- {<<"fast_pbkdf2">>, <<"A5F488E3D8E7440B9D9151F63153410FA5A3D2F311C3E8EB27708AA60D83D3ED">>}]},
+ {<<"fast_pbkdf2">>, <<"4F09D6C6C20DBEE1970E0A6AE91432E1B7731F88426C671D083BAC31FFA1FDAD">>}]},
 {pkg_hash_ext,[
- {<<"fast_pbkdf2">>, <<"B44B140EDE7DCD0591726DFFDE550AD12C95B9B34D503E240A42B4E32567242A">>}]}
+ {<<"fast_pbkdf2">>, <<"2900431E2E6402F23A92754448BBD949DA366BC9C984FDC791DDCFCC41042434">>}]}
 ].
