@@ -84,9 +84,14 @@ parse_nonce(_, _) ->
 -spec parse_salt(binary(), fast_scram_state()) -> parse_return().
 parse_salt(<<>>, _State) ->
     {error, <<"no-resources">>};
-parse_salt(<<"s=", Salt/binary>>, State) ->
+parse_salt(<<"s=", Salt0/binary>>, State) ->
     Challenge = State#fast_scram_state.challenge,
-    {ok, State#fast_scram_state{challenge = Challenge#challenge{salt = base64:decode(Salt)}}};
+    case maybe_base64_decode(Salt0) of
+        {error, Reason} ->
+            {error, Reason};
+        Salt ->
+            {ok, State#fast_scram_state{challenge = Challenge#challenge{salt = Salt}}}
+    end;
 parse_salt(_, _) ->
     {error, <<"other-error">>}.
 
@@ -123,8 +128,12 @@ parse_proof(<<"p=">>, _State) ->
     {error, <<"invalid-proof">>};
 parse_proof(<<"p=", Proof0/binary>>,
             #fast_scram_state{data = Data} = State) ->
-    Proof = base64:decode(Proof0),
-    {ok, State#fast_scram_state{data = Data#{client_proof => Proof}}}.
+    case maybe_base64_decode(Proof0) of
+        {error, Reason} ->
+            {error, Reason};
+        Proof ->
+            {ok, State#fast_scram_state{data = Data#{client_proof => Proof}}}
+    end.
 
 -spec parse_channel_binding(binary(), fast_scram_state()) -> parse_return().
 parse_channel_binding(<<>>, _State) ->
@@ -145,9 +154,11 @@ parse_server_error_or_verifier(
   <<"v=", Verifier/binary>>,
   #fast_scram_state{scram_definitions = #scram_definitions{} = ScramDefs} = State) ->
     ServerSignature = ScramDefs#scram_definitions.server_signature,
-    case base64:decode(Verifier) of
+    case maybe_base64_decode(Verifier) of
         ServerSignature ->
             {ok, State};
+        {error, Reason} ->
+            {error, Reason};
         _ ->
             {error, <<"authentication-failure">>}
     end;
@@ -243,4 +254,11 @@ verify_cbind_input(CBindInput, #channel_binding{data = CBindData} = CBConfig, Da
     case Constructed =:= CBindInput of
         true -> ok;
         false -> {error, <<"channel-bindings-dont-match">>}
+    end.
+
+maybe_base64_decode(Binary) ->
+    try base64:decode(Binary) of
+        Decoded -> Decoded
+    catch error:badarg ->
+              {error, <<"invalid-encoding">>}
     end.

@@ -23,6 +23,7 @@
          verification_name_does_not_escape_values_correctly/1,
          authentication_server_last_message_is_an_error/1,
          authentication_server_rejects_the_proof/1,
+         authentication_server_rejects_invalid_encoded_proof/1,
          authentication_client_rejects_the_signature/1,
          nonce_client_receives_invalid/1,
          nonce_server_finds_non_matching/1,
@@ -89,6 +90,7 @@ groups() ->
       [
        authentication_server_last_message_is_an_error,
        authentication_server_rejects_the_proof,
+       authentication_server_rejects_invalid_encoded_proof,
        authentication_client_rejects_the_signature
       ]},
      {nonce, [parallel],
@@ -315,6 +317,14 @@ authentication_server_rejects_the_proof(_Config) ->
                    "p=", (base64:encode(<<"wrong_proof">>))/binary>>,
     {error, Reason, _} = fast_scram:mech_step(ServerState4, WrongProof),
     ?assertEqual(<<"e=invalid-proof">>, Reason).
+
+authentication_server_rejects_invalid_encoded_proof(_Config) ->
+    ServerState2 = typical_scram_configuration(server),
+    {continue, _, ServerState4} = fast_scram:mech_step(ServerState2, client_first()),
+    WrongProof = <<"c=biws,r=fyko+d2lbbFgONRv9qkxdawL3rfcNHYJY1ZVvWVs7j,",
+                   "p=wrong_proof">>,
+    {error, Reason, _} = fast_scram:mech_step(ServerState4, WrongProof),
+    ?assertEqual(<<"e=invalid-encoding">>, Reason).
 
 authentication_client_rejects_the_signature(_Config) ->
     ClientState1 = typical_scram_configuration(client),
