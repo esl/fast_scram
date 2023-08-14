@@ -34,7 +34,8 @@
 -spec salted_password(sha_type(), binary(), binary(), non_neg_integer()) -> binary().
 salted_password(Sha, Password, Salt, IterationCount)
   when ?is_valid_hash(Sha), is_binary(Password), is_binary(Salt), ?is_positive_integer(IterationCount) ->
-    fast_pbkdf2:pbkdf2(Sha, Password, Salt, IterationCount).
+    #{ size := KeyLength } = crypto:hash_info(Sha),
+    crypto:pbkdf2_hmac(Sha, Password, Salt, IterationCount, KeyLength). 
 
 -spec client_key(sha_type(), binary()) -> binary().
 client_key(Sha, SaltedPassword)

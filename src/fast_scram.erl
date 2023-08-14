@@ -333,4 +333,5 @@ server_signature(Sha, ServerKey, AuthMessage) ->
 -spec hi(sha_type(), binary(), binary(), non_neg_integer()) -> binary().
 hi(Hash, Password, Salt, IterationCount)
   when ?is_valid_hash(Hash), is_binary(Password), is_binary(Salt), ?is_positive_integer(IterationCount) ->
-    fast_pbkdf2:pbkdf2(Hash, Password, Salt, IterationCount).
+    #{ size := KeyLength } = crypto:hash_info(Hash),
+    crypto:pbkdf2_hmac(Hash, Password, Salt, IterationCount, KeyLength).

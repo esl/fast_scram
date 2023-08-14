@@ -1,8 +1,1 @@
-{"1.2.0",
-[{<<"fast_pbkdf2">>,{pkg,<<"fast_pbkdf2">>,<<"1.0.3">>},0}]}.
-[
-{pkg_hash,[
- {<<"fast_pbkdf2">>, <<"4F09D6C6C20DBEE1970E0A6AE91432E1B7731F88426C671D083BAC31FFA1FDAD">>}]},
-{pkg_hash_ext,[
- {<<"fast_pbkdf2">>, <<"2900431E2E6402F23A92754448BBD949DA366BC9C984FDC791DDCFCC41042434">>}]}
-].
+[].
