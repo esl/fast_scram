@@ -8,6 +8,7 @@
     crypto,
     fast_pbkdf2
    ]},
+  {optional_applications, [fast_pbkdf2]},
   {env,[]},
   {modules, []},
   {licenses, ["Apache 2.0"]},

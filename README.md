@@ -217,6 +217,20 @@ and also that other defence mechanisms like IP blacklisting or traffic shaping, 
 It all boils down to the right PBKDF2 implementation, as done in [fast_pbkdf2][fast_pbkdf2], which is on average 10x faster on the machines I've tested it.
 But while the erlang implementation consumes memory linearly to the iteration count, the NIF implementation does not allocate any more memory.
 
+### Running without NIFs
+Note that since OTP24.2, the `crypto` application exposes a native `pbkdf2_hmac` function. However, the NIF implementation from [fast_pbkdf2] is twice as fast, so that one is left as a default.
+
+If for any particular reason you want to skip compiling and loading custom NIFs, you can override the dependency using `rebar3`'s overrides as below, this way the dependency will not be fetched and code will be compiled to use the `crypto` callback instead.
+
+```erlang
+{overrides,
+  [
+    {override, fast_scram, [{erl_opts, [{d, 'WITHOUT_NIFS'}]}, {deps, []}]},
+  ]
+}.
+
+```
+
 ## Read more:
 * SCRAM: [RFC5802](https://tools.ietf.org/html/rfc5802)
 * SCRAM-SHA-256 update: [RFC7677](https://tools.ietf.org/html/rfc7677)
