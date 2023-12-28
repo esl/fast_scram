@@ -12,23 +12,24 @@ jobs:
     name: OTP ${{matrix.otp}}
     strategy:
       matrix:
-        otp: ['24.0', '23.3', '22.3', '21.3']
-    runs-on: 'ubuntu-20.04'
+        otp: ['26.2', '25.3', '24.3']
+        rebar3: ['3.22.1']
+    runs-on: 'ubuntu-22.04'
     env:
       OTPVER: ${{ matrix.otp }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: ErlGang/setup-erlang@v1.0.0
+      - uses: actions/checkout@v3
+      - uses: erlef/setup-beam@v1
         with:
-          otp-version: ${{ matrix.otp }}
-      - run: make rebar3
-      - run: make
-      - run: make test
-      - run: make dialyzer
-        if: ${{ matrix.otp == '24.0' }}
-      - run: make codecov
-        if: ${{ matrix.otp == '24.0' }}
-      - run: pip install --user codecov
-        if: ${{ matrix.otp == '24.0' }}
-      - run: /home/runner/.local/bin/codecov
-        if: ${{ matrix.otp == '24.0' }}
+          otp-version: ${{matrix.otp}}
+          rebar3-version: ${{matrix.rebar3}}
+      - run: rebar3 do ct --cover
+      - run: rebar3 as test codecov analyze
+      - run: rebar3 dialyzer
+        if: ${{ matrix.otp == '26.2' }}
+      - uses: codecov/codecov-action@v3
+        name: Upload coverage reports to Codecov
+        if: ${{ matrix.otp == '26.2' }}
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true # optional (default = false)
