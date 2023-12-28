@@ -15,7 +15,7 @@
    [{compile, {pc, compile}},
     {clean, {pc, clean}}]}]}.
 {deps,
- [{fast_scram, {git, "https://github.com/esl/fast_scram.git", {branch, "master"}}}]}.
+ [{fast_scram, "0.6.0"}]}.
 ```
 
 ## Using
