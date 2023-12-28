@@ -327,10 +327,6 @@ server_key(Sha, SaltedPassword) ->
 server_signature(Sha, ServerKey, AuthMessage) ->
     fast_scram_definitions:server_signature(Sha, ServerKey, AuthMessage).
 
-%%%===================================================================
-%%% NIF
-%%%===================================================================
 -spec hi(sha_type(), binary(), binary(), non_neg_integer()) -> binary().
-hi(Hash, Password, Salt, IterationCount)
-  when ?is_valid_hash(Hash), is_binary(Password), is_binary(Salt), ?is_positive_integer(IterationCount) ->
-    fast_pbkdf2:pbkdf2(Hash, Password, Salt, IterationCount).
+hi(Hash, Password, Salt, IterationCount) ->
+    fast_scram_definitions:salted_password(Hash, Password, Salt, IterationCount).
