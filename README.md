@@ -3,6 +3,7 @@
 [![Actions Status](https://github.com/esl/fast_scram/workflows/ci/badge.svg)](https://github.com/esl/fast_scram/actions)
 [![codecov](https://codecov.io/gh/esl/fast_scram/branch/master/graph/badge.svg)](https://codecov.io/gh/esl/fast_scram)
 [![Hex](http://img.shields.io/hexpm/v/fast_scram.svg)](https://hex.pm/packages/fast_scram)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg)](https://hexdocs.pm/fast_scram/)
 
 `fast_scram` is a purely-functional Erlang implementation of the _Salted Challenge Response Authentication Mechanism_, where the challenge algorithm is implemented as a carefully-optimised NIF using [fast_pbkdf2][fast_pbkdf2].
 
@@ -235,7 +236,7 @@ If for any particular reason you want to skip compiling and loading custom NIFs,
 * SCRAM: [RFC5802](https://tools.ietf.org/html/rfc5802)
 * SCRAM-SHA-256 update: [RFC7677](https://tools.ietf.org/html/rfc7677)
 * Password-Based Cryptography Specification (PBKDF2): [RFC8018](https://tools.ietf.org/html/rfc8018)
-* HMAC: [RFC2104]( https://tools.ietf.org/html/rfc2104)
+* HMAC: [RFC2104](https://tools.ietf.org/html/rfc2104)
 * SHAs and HMAC-SHA: [RFC6234](https://tools.ietf.org/html/rfc6234)
 
 [MIM]: https://github.com/esl/MongooseIM

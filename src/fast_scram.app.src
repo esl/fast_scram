@@ -1,16 +1,16 @@
-{application, fast_scram,
- [{description, "A fast Salted Challenge Response Authentication Mechanism"},
-  {vsn, git},
-  {registered, []},
-  {applications,
-   [kernel,
-    stdlib,
-    crypto,
-    fast_pbkdf2
-   ]},
-  {optional_applications, [fast_pbkdf2]},
-  {env,[]},
-  {modules, []},
-  {licenses, ["Apache 2.0"]},
-  {links, [{"GitHub", "https://github.com/esl/fast_scram/"}]}
- ]}.
+{application, fast_scram, [
+    {description, "A fast Salted Challenge Response Authentication Mechanism"},
+    {vsn, git},
+    {registered, []},
+    {applications, [
+        kernel,
+        stdlib,
+        crypto,
+        fast_pbkdf2
+    ]},
+    {optional_applications, [fast_pbkdf2]},
+    {env, []},
+    {modules, []},
+    {licenses, ["Apache-2.0"]},
+    {links, [{"GitHub", "https://github.com/esl/fast_scram/"}]}
+]}.

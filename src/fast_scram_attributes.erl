@@ -1,19 +1,21 @@
+%% @private
+%% @see fast_scram
 -module(fast_scram_attributes).
 
--include("types.hrl").
+-include("fast_scram.hrl").
 
 -export([
-         reserved_scram_codes/0,
-         gs2_header/2,
-         nonce/1,
-         cbind_input/2,
-         client_first_message_bare/2,
-         client_final_message_without_proof/3,
-         server_first_message/2,
-         client_first_message/3,
-         client_final_message/2,
-         server_final_message/1
-        ]).
+    reserved_scram_codes/0,
+    gs2_header/2,
+    nonce/1,
+    cbind_input/2,
+    client_first_message_bare/2,
+    client_final_message_without_proof/3,
+    server_first_message/2,
+    client_first_message/3,
+    client_final_message/2,
+    server_final_message/1
+]).
 
 %%%===================================================================
 %%% SCRAM attributes
@@ -31,10 +33,17 @@
 %     'v=' | % base64 ServerSignature
 %     'e='.  % error that occurred during auth
 reserved_scram_codes() ->
-    [<<"p">>, <<"n">>, <<"r">>,
-     <<"c">>, <<"s">>, <<"i">>,
-     <<"a">>, <<"v">>, <<"e">>].
-
+    [
+        <<"p">>,
+        <<"n">>,
+        <<"r">>,
+        <<"c">>,
+        <<"s">>,
+        <<"i">>,
+        <<"a">>,
+        <<"v">>,
+        <<"e">>
+    ].
 
 % gs2-cbind-flag  = ("p=" cb-name) / "n" / "y"
 %                   ;; "n" -> client doesn't support channel binding.
@@ -62,8 +71,7 @@ authzid(ID) when is_binary(ID) ->
 %                   ;; don't include that flag).
 gs2_header(#channel_binding{variant = Variant}, Data) ->
     AuthZID = maps:get(auth_zid, Data, <<>>),
-    <<(gs2_cbind_flag(Variant))/binary, ",",
-      (authzid(AuthZID))/binary, ",">>.
+    <<(gs2_cbind_flag(Variant))/binary, ",", (authzid(AuthZID))/binary, ",">>.
 
 % reserved-mext  = "m=" 1*(value-char)
 %                   ;; Reserved for signaling mandatory extensions.
@@ -96,7 +104,7 @@ salt(Salt) ->
 
 % iteration-count = "i=" posit-number
 %                   ;; A positive number.
-iteration_count(IterationCount) when ?is_positive_integer(IterationCount) ->
+iteration_count(IterationCount) when ?IS_POSITIVE_INTEGER(IterationCount) ->
     <<"i=", (integer_to_binary(IterationCount))/binary>>.
 
 % channel-binding = "c=" base64
@@ -108,7 +116,7 @@ cbind_input(GS2Header, CBindData) ->
     base64:encode(<<GS2Header/binary, CBindData/binary>>).
 
 % proof           = "p=" base64
-proof(Proof)->
+proof(Proof) ->
     <<"p=", (base64:encode(Proof))/binary>>.
 
 %%%===================================================================
@@ -117,23 +125,25 @@ proof(Proof)->
 % client-first-message-bare =
 %                   [reserved-mext ","]
 %                   username "," nonce ["," extensions]
--spec client_first_message_bare(map(), nonce()) -> binary().
-client_first_message_bare(#{username := Username}, Nonce)->
-    <<(reserved_mext())/binary,
-      (username(Username))/binary, ",",
-      (nonce(Nonce))/binary,
-      (extensions())/binary>>.
+-spec client_first_message_bare(map(), fast_scram:nonce()) -> binary().
+client_first_message_bare(#{username := Username}, Nonce) ->
+    <<
+        (reserved_mext())/binary,
+        (username(Username))/binary,
+        ",",
+        (nonce(Nonce))/binary,
+        (extensions())/binary
+    >>.
 
 % client-final-message-without-proof =
 %                   channel-binding "," nonce ["," extensions]
-client_final_message_without_proof(CBConfig, Nonce, Data) ->
-    <<(channel_binding(CBConfig, Data))/binary, ",",
-      (nonce(Nonce))/binary,
-      (extensions())/binary>>.
+client_final_message_without_proof(CbConfig, Nonce, Data) ->
+    <<(channel_binding(CbConfig, Data))/binary, ",", (nonce(Nonce))/binary, (extensions())/binary>>.
 
 % client-first-message =
 %                   gs2-header client-first-message-bare
--spec client_first_message(channel_binding(), nonce(), map()) -> {binary(), binary()}.
+-spec client_first_message(fast_scram:channel_binding(), fast_scram:nonce(), map()) ->
+    {binary(), binary()}.
 client_first_message(CbConfig, Nonce, Data) ->
     GS2Header = gs2_header(CbConfig, Data),
     ClientFirstMessageBare = client_first_message_bare(Data, Nonce),
@@ -143,17 +153,20 @@ client_first_message(CbConfig, Nonce, Data) ->
 %                   [reserved-mext ","] nonce "," salt ","
 %                   iteration-count ["," extensions]
 server_first_message(Nonce, #challenge{salt = Salt, it_count = IterationCount}) ->
-    <<(reserved_mext())/binary,
-      (nonce(Nonce))/binary, ",",
-      (salt(Salt))/binary, ",",
-      (iteration_count(IterationCount))/binary,
-      (extensions())/binary>>.
+    <<
+        (reserved_mext())/binary,
+        (nonce(Nonce))/binary,
+        ",",
+        (salt(Salt))/binary,
+        ",",
+        (iteration_count(IterationCount))/binary,
+        (extensions())/binary
+    >>.
 
 % client-final-message =
 %                   client-final-message-without-proof "," proof
 client_final_message(ClientFinalNoProof, ClientProof) ->
-    <<ClientFinalNoProof/binary, ",",
-      (proof(ClientProof))/binary>>.
+    <<ClientFinalNoProof/binary, ",", (proof(ClientProof))/binary>>.
 
 % server-error = "e=" server-error-value
 
