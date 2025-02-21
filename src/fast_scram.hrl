@@ -5,7 +5,8 @@
     H =:= sha orelse
         H =:= sha224 orelse H =:= sha256 orelse
         H =:= sha384 orelse H =:= sha512 orelse
-        H =:= sha3_512
+        H =:= sha3_224 orelse H =:= sha3_256 orelse
+        H =:= sha3_384 orelse H =:= sha3_512
 ).
 
 -record(nonce, {
