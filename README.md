@@ -32,7 +32,7 @@ SaltedPassword = fast_scram:hi(Hash, Password, Salt, IterationCount)
 ```
 where `Hash` is the underlying hash function chosen as described by
 ```erlang
--type sha_type() :: crypto:sha1() | crypto:sha2().
+-type sha_type() :: crypto:sha1() | crypto:sha2() | crypto:sha3().
 ```
 
 ### Full algorithm
@@ -219,7 +219,7 @@ It all boils down to the right PBKDF2 implementation, as done in [fast_pbkdf2][f
 But while the erlang implementation consumes memory linearly to the iteration count, the NIF implementation does not allocate any more memory.
 
 ### Running without NIFs
-Note that since OTP24.2, the `crypto` application exposes a native `pbkdf2_hmac` function. However, the NIF implementation from [fast_pbkdf2] is twice as fast, so that one is left as a default.
+Note that since OTP24.2, the `crypto` application exposes a native `pbkdf2_hmac` function. However, the NIF implementation from [fast_pbkdf2] is ~30% faster, and supports SHA3, so that one is left as a default.
 
 If for any particular reason you want to skip compiling and loading custom NIFs, you can override the dependency using `rebar3`'s overrides as below, this way the dependency will not be fetched and code will be compiled to use the `crypto` callback instead.
 
@@ -229,7 +229,6 @@ If for any particular reason you want to skip compiling and loading custom NIFs,
     {override, fast_scram, [{erl_opts, [{d, 'WITHOUT_NIFS'}]}, {deps, []}]},
   ]
 }.
-
 ```
 
 ## Read more:

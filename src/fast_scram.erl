@@ -3,7 +3,11 @@
 
 -include("fast_scram.hrl").
 
+-ifdef(WITHOUT_NIFS).
 -type sha_type() :: crypto:sha1() | crypto:sha2().
+-else.
+-type sha_type() :: crypto:sha1() | crypto:sha2() | sha3_224 | sha3_256 | sha3_384 | sha3_512.
+-endif.
 %%% Supported underlying hashing algorithms.
 -type configuration() :: #{
     entity := client | server,

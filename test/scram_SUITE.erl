@@ -8,7 +8,9 @@
 %% test cases
 -export([
     regular_scram_authentication_example_from_the_rfc/1,
-    regular_scram_authentication/1,
+    regular_scram_authentication_sha1/1,
+    regular_scram_authentication_sha2/1,
+    regular_scram_authentication_sha3/1,
     wrong_configuration_key/1,
     configuration_client_sends_wrong_username/1,
     configuration_cached_keys_works_easily/0,
@@ -73,7 +75,9 @@ groups() ->
     [
         {verifications, [parallel], [
             regular_scram_authentication_example_from_the_rfc,
-            regular_scram_authentication,
+            regular_scram_authentication_sha1,
+            regular_scram_authentication_sha2,
+            regular_scram_authentication_sha3,
             wrong_configuration_key,
             verification_name_escapes_values_correctly,
             verification_name_does_not_escape_values_correctly,
@@ -152,18 +156,33 @@ regular_scram_authentication_example_from_the_rfc(_Config) ->
     %% Client successfully accepts the server's verifier
     {ok, _Final, _ClientState7} = fast_scram:mech_step(ClientState5, ServerFinal).
 
-regular_scram_authentication(_Config) ->
+regular_scram_authentication_sha1(_Config) ->
+    regular_scram_authentication(_Config, sha).
+
+regular_scram_authentication_sha2(_Config) ->
+    regular_scram_authentication(_Config, sha224),
+    regular_scram_authentication(_Config, sha256),
+    regular_scram_authentication(_Config, sha384),
+    regular_scram_authentication(_Config, sha512).
+
+regular_scram_authentication_sha3(_Config) ->
+    regular_scram_authentication(_Config, sha3_224),
+    regular_scram_authentication(_Config, sha3_256),
+    regular_scram_authentication(_Config, sha3_384),
+    regular_scram_authentication(_Config, sha3_512).
+
+regular_scram_authentication(_Config, Hash) ->
     Password = base64:encode(crypto:strong_rand_bytes(8 + rand:uniform(8))),
     {ok, ClientState1} = fast_scram:mech_new(#{
         entity => client,
-        hash_method => sha256,
+        hash_method => Hash,
         username => <<"user">>,
         auth_data => #{password => Password}
     }),
     {ok, ServerState2} = fast_scram:mech_new(
         #{
             entity => server,
-            hash_method => sha256,
+            hash_method => Hash,
             username => <<"user">>,
             retrieve_mechanism =>
                 fun(U, S) -> retrieve_mechanism(U, #{password => Password}, S) end
