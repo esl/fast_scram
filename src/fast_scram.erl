@@ -360,6 +360,8 @@ apply_rules_until_match(Input, [Rule | RulesLeft], State) ->
     case Rule(Input, State) of
         {ok, NewState} ->
             {RulesLeft, NewState};
+        {keep_rule, NewState} ->
+            {[Rule | RulesLeft], NewState};
         {skip_rule, State} ->
             apply_rules_until_match(Input, RulesLeft, State);
         {error, Reason} ->
