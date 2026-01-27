@@ -24,6 +24,7 @@
     verification_name_escapes_values_correctly/1,
     verification_name_does_not_escape_values_correctly/1,
     authentication_server_last_message_is_an_error/1,
+    authentication_ignores_extra_extensions/1,
     authentication_server_rejects_the_proof/1,
     authentication_server_rejects_invalid_encoded_proof/1,
     authentication_client_rejects_the_signature/1,
@@ -52,6 +53,7 @@
     wrong_flag_salt/1,
     wrong_flag_it_count/1,
     wrong_it_count/1,
+    wrong_extensions/1,
     too_much_input/1,
     not_supported_authzid/1,
     not_supported_mext/1,
@@ -89,6 +91,7 @@ groups() ->
         ]},
         {authentication, [parallel], [
             authentication_server_last_message_is_an_error,
+            authentication_ignores_extra_extensions,
             authentication_server_rejects_the_proof,
             authentication_server_rejects_invalid_encoded_proof,
             authentication_client_rejects_the_signature
@@ -125,6 +128,7 @@ groups() ->
             wrong_flag_salt,
             wrong_flag_it_count,
             wrong_it_count,
+            wrong_extensions,
             too_much_input
         ]},
         {not_supported, [parallel], [
@@ -397,6 +401,11 @@ authentication_server_last_message_is_an_error(_Config) ->
         ClientState#fast_scram_state{step = 5}, <<"e=invalid">>
     ),
     ?assertEqual(<<"invalid">>, Reason).
+
+authentication_ignores_extra_extensions(_Config) ->
+    ServerState = typical_scram_configuration(server),
+    ClientFirst1 = <<"n,,n=user,r=fyko+d2lbbFgONRv9qkxdawL,g=extra1,h=extra2">>,
+    ?assertMatch({continue, _, _}, fast_scram:mech_step(ServerState, ClientFirst1)).
 
 configuration_client_sends_wrong_username(_Config) ->
     ClientState1 = typical_scram_configuration(client),
@@ -671,6 +680,14 @@ wrong_it_count(_Config) ->
         <<"r=fyko+d2lbbFgONRv9qkxdawL3rfcNHYJY1ZVvWVs7j,s=QSXCR+Q6sek8bf92,i=wrong">>,
     {error, Reason, _} = fast_scram:mech_step(ClientState3, ServerWrongItCount),
     ?assertEqual(<<"invalid-iteration-count">>, Reason).
+wrong_extensions(_Config) ->
+    ServerState = typical_scram_configuration(server),
+    ClientFirst1 = <<"n,,n=user,r=fyko+d2lbbFgONRv9qkxdawL,9=invalid">>,
+    {error, Reason1, _} = fast_scram:mech_step(ServerState, ClientFirst1),
+    ?assertEqual(<<"invalid-extensions">>, Reason1),
+    ClientFirst2 = <<"n,,n=user,r=fyko+d2lbbFgONRv9qkxdawL,zz=invalid">>,
+    {error, Reason2, _} = fast_scram:mech_step(ServerState, ClientFirst2),
+    ?assertEqual(<<"invalid-extensions">>, Reason2).
 too_much_input(_Config) ->
     ServerState2 = typical_scram_configuration(server),
     Username = <<"n,,n=user,r=fyko+d2lbbFgONRv9qkxdawL,r=toomuch">>,
@@ -690,12 +707,9 @@ not_supported_mext(_Config) ->
     {error, Reason, _} = fast_scram:mech_step(ClientState3, ServerWithMext),
     ?assertEqual(<<"extensions-not-supported">>, Reason).
 not_supported_extension(_Config) ->
-    ServerState2 = typical_scram_configuration(server),
-    ClientFirst1 = <<"n,,n=user,r=fyko+d2lbbFgONRv9qkxdawL,t=extension">>,
-    {error, Reason, _} = fast_scram:mech_step(ServerState2, ClientFirst1),
-    ?assertEqual(<<"extensions-not-supported">>, Reason),
-    ClientFirst2 = <<"n,,n=user,r=fyko+d2lbbFgONRv9qkxdawL,m=extension">>,
-    {error, Reason, _} = fast_scram:mech_step(ServerState2, ClientFirst2),
+    ServerState = typical_scram_configuration(server),
+    ClientFirst = <<"n,,n=user,r=fyko+d2lbbFgONRv9qkxdawL,m=extension">>,
+    {error, Reason, _} = fast_scram:mech_step(ServerState, ClientFirst),
     ?assertEqual(<<"extensions-not-supported">>, Reason).
 
 %%%===================================================================

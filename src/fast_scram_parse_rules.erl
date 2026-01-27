@@ -6,6 +6,7 @@
 
 -type parse_return() ::
     {ok, fast_scram:state()}
+    | {keep_rule, fast_scram:state()}
     | {skip_rule, fast_scram:state()}
     | {error, binary()}.
 -export_type([parse_return/0]).
@@ -124,16 +125,18 @@ parse_extensions(<<>>, _) ->
     {error, <<"other-error">>};
 parse_extensions(<<"m=", _/binary>>, _) ->
     {error, <<"extensions-not-supported">>};
-parse_extensions(<<Char:1/binary, _/binary>>, State) ->
-    case
-        lists:any(
-            fun(El) -> Char =:= El end,
-            fast_scram_attributes:reserved_scram_codes()
-        )
-    of
-        true -> {skip_rule, State};
-        false -> {error, <<"extensions-not-supported">>}
-    end.
+parse_extensions(<<Char, "=", _/binary>>, State) ->
+    case lists:member(<<Char>>, fast_scram_attributes:reserved_scram_codes()) of
+        true ->
+            {skip_rule, State};
+        false ->
+            case (Char >= $a andalso Char =< $z) orelse (Char >= $A andalso Char =< $Z) of
+                true -> {keep_rule, State};
+                false -> {error, <<"invalid-extensions">>}
+            end
+    end;
+parse_extensions(_, _) ->
+    {error, <<"invalid-extensions">>}.
 
 -spec parse_proof(binary(), fast_scram:state()) -> parse_return().
 parse_proof(<<>>, _State) ->
