@@ -245,7 +245,7 @@ supported_channel_binding_flag(
     <<"y">>,
     #channel_binding{variant = undefined} = CbConfig
 ) ->
-    CbConfig;
+    CbConfig#channel_binding{variant = none};
 supported_channel_binding_flag(
     <<"y">>,
     #channel_binding{variant = Type}
