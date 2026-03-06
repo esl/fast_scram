@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         otp: ['28', '27', '26']
-        rebar3: ['3.25.0']
+        rebar3: ['3.27.0']
     runs-on: 'ubuntu-24.04'
     env:
       OTPVER: ${{ matrix.otp }}
