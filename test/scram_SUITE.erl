@@ -504,19 +504,11 @@ channel_server_offers_but_client_does_not_take_is_ok(_Config) ->
     {continue, _, _} = fast_scram:mech_step(ServerState2, YesGS2Flag).
 
 channel_not_advertise_but_client_could_is_ok(_Config) ->
-    {ok, ClientState1} = fast_scram:mech_new(
-        #{
-            entity => client,
-            hash_method => sha,
-            username => <<"user">>,
-            channel_binding => {none, <<>>},
-            auth_data => #{password => <<"pencil">>}
-        }
-    ),
     {ok, ServerState2} = fast_scram:mech_new(
         #{
             entity => server,
             hash_method => sha,
+            nonce => <<"fyko+d2lbbFgONRv9qkxdawL">>,
             retrieve_mechanism =>
                 fun(_) ->
                     #{
@@ -527,11 +519,11 @@ channel_not_advertise_but_client_could_is_ok(_Config) ->
                 end
         }
     ),
-    {continue, ClientFirst, ClientState3} = fast_scram:mech_step(ClientState1, <<>>),
-    {continue, ServerFirst, ServerState4} = fast_scram:mech_step(ServerState2, ClientFirst),
-    {continue, ClientFinal, ClientState5} = fast_scram:mech_step(ClientState3, ServerFirst),
-    {ok, ServerFinal, _} = fast_scram:mech_step(ServerState4, ClientFinal),
-    {ok, _, _} = fast_scram:mech_step(ClientState5, ServerFinal).
+    YesGS2Flag = <<"y,,n=user,r=lmGaEB+ze/7giz6VC6KEOw==">>,
+    {continue, _, ServerState4} = fast_scram:mech_step(ServerState2, YesGS2Flag),
+    ClientFinal =
+        <<"c=eSws,r=lmGaEB+ze/7giz6VC6KEOw==fyko+d2lbbFgONRv9qkxdawL,p=Ab1g6yKcTC3ay2KCQFkjDXdkYak=">>,
+    {ok, _, _} = fast_scram:mech_step(ServerState4, ClientFinal).
 
 %% If the channel binding flag was "p" and the server does not support
 %% the indicated channel binding type, then the server MUST fail authentication.
