@@ -12,7 +12,7 @@ jobs:
     name: OTP ${{matrix.otp}}
     strategy:
       matrix:
-        otp: ['28', '27', '26']
+        otp: ['29', '28', '27']
         rebar3: ['3.27.0']
     runs-on: 'ubuntu-24.04'
     env:
@@ -28,10 +28,10 @@ jobs:
       - run: rebar3 do ct --cover
       - run: rebar3 as test codecov analyze
       - run: rebar3 dialyzer
-        if: ${{ matrix.otp == '28' }}
+        if: ${{ matrix.otp == '29' }}
       - name: Upload code coverage
         uses: codecov/codecov-action@v4
-        if: ${{ matrix.otp == '28' }}
+        if: ${{ matrix.otp == '29' }}
         with:
           files: _build/test/covertool/fast_scram.covertool.xml
           token: ${{ secrets.CODECOV_TOKEN }}
