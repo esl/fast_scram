@@ -250,9 +250,7 @@ parse_client_first_message(ClientIn, State0) ->
     ],
     Chunks = binary:split(ClientIn, <<",">>, [global]),
     case match_rules(Chunks, Rules, State0) of
-        {UnusedRules, State1 = #fast_scram_state{}} when
-            is_list(UnusedRules), length(UnusedRules) == 1
-        ->
+        {[_], State1 = #fast_scram_state{}} ->
             ClientFirstMsgBare = extract_client_first_msg_bare_from_first(Chunks, ClientIn),
             State2 = fast_scram_parse_rules:append_to_auth_message_in_state(
                 State1, ClientFirstMsgBare
@@ -276,9 +274,7 @@ parse_server_first_message(ServerIn, State0) ->
     ],
     ServerInChunks = binary:split(ServerIn, <<",">>, [global]),
     case match_rules(ServerInChunks, Rules, State0) of
-        {UnusedRules, State1 = #fast_scram_state{}} when
-            is_list(UnusedRules), length(UnusedRules) == 1
-        ->
+        {[_], State1 = #fast_scram_state{}} ->
             State2 = fast_scram_parse_rules:append_to_auth_message_in_state(
                 State1, <<",", ServerIn/binary>>
             ),
@@ -299,9 +295,7 @@ parse_client_final_message(ClientIn, State0) ->
     ],
     ClientInList = binary:split(ClientIn, <<",">>, [global]),
     case match_rules(ClientInList, Rules, State0) of
-        {UnusedRules, State1 = #fast_scram_state{}} when
-            is_list(UnusedRules), length(UnusedRules) == 0
-        ->
+        {[], State1 = #fast_scram_state{}} ->
             ClientFinalNoProof = extract_client_final_no_proof(ClientIn),
             State2 = fast_scram_parse_rules:append_to_auth_message_in_state(
                 State1, <<",", ClientFinalNoProof/binary>>
@@ -323,9 +317,7 @@ parse_server_final_message(ServerIn, State0) ->
     ],
     ServerInChunks = binary:split(ServerIn, <<",">>, [global]),
     case match_rules(ServerInChunks, Rules, State0) of
-        {UnusedRules, State1 = #fast_scram_state{}} when
-            is_list(UnusedRules), length(UnusedRules) == 1
-        ->
+        {[_], State1 = #fast_scram_state{}} ->
             {ok, State1};
         {error, Reason} ->
             {error, Reason}

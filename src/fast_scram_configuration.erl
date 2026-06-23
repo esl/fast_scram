@@ -130,7 +130,8 @@ set_val_in_state(it_count, Num, #fast_scram_state{challenge = Ch} = St) when
 set_val_in_state(salt, Bin, #fast_scram_state{challenge = Ch} = St) when is_binary(Bin) ->
     St#fast_scram_state{challenge = Ch#challenge{salt = Bin}};
 set_val_in_state(channel_binding, {Type, Data}, #fast_scram_state{channel_binding = CB} = St) when
-    is_atom(Type) orelse is_binary(Type), is_binary(Data)
+    is_atom(Type), is_binary(Data);
+    is_binary(Type), is_binary(Data)
 ->
     St#fast_scram_state{channel_binding = CB#channel_binding{variant = Type, data = Data}};
 set_val_in_state(hash_method, HM, #fast_scram_state{scram_definitions = SD} = St) when
